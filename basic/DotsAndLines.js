@@ -159,42 +159,45 @@ function initVertexBuffers(gl) {
 // z is perpendicular to the screen
 //normalize the obj file value
   var vertices = new Float32Array([
-    //if indexArray is being used then
-    // 1,  0,  0, 1, 
-    // 0,  -1,  0, 1,
-    // -1,  0,  0, 1,
-    // 0,  1,  0, 1,
-    // 0,  0,  1, 1,
-    // 0,  0,  -1, 1,
-
-    //not using the indexArray
-    -1,  0,  0, 1,
-    1,  0,  0, 1,
-    0,  0,  1, 1,
-
-    -1,  0,  0, 1,
+    //vertices connect with 1,0,0 (like a 4-claw graph)
+    1,  0,  0, 1, 
     0,  -1,  0, 1,
-    0,  0,  1, 1,
 
+    1,  0,  0, 1, 
     0,  1,  0, 1,
-    -1,  0,  0, 1,
-    0,  0,  1, 1,
 
-    1,  0,  0, 1,
-    0,  1,  0, 1,
-    0,  0,  1, 1,
+    1,  0,  0, 1, 
+    0,  0,   1, 1,
 
-    1,  0,  0, 1,
-    0,  -1,  0, 1,
-    0,  0,  -1, 1,
+    1,  0,  0, 1, 
+    0,  0,   -1, 1,
 
-    0,  -1,  0, 1,
-    -1,  0,  0, 1,
-    0,  0,  -1, 1,
+    //vertices connect with -1,0,0
+    -1,  0,  0, 1, 
+    0, -1, 0 ,1,
 
-    0,  1,  0, 1,
-    1,  0,  0, 1,
-    0,  0,  -1, 1,
+    -1,  0,  0, 1, 
+    0, 1, 0 ,1,
+
+    -1,  0,  0, 1, 
+    0, 0, 1 ,1,
+
+    -1,  0,  0, 1, 
+    0, 0, -1 ,1,
+
+    //2 lines from top 
+    0,1,0,1,
+    0,0,1,1,
+
+    0,1,0,1,
+    0,0,-1,1,
+
+    //2 lines from bottom
+    0,-1,0,1,
+    0,0,1,1,
+
+    0,-1,0,1,
+    0,0,-1,1,
 
   ]);
   vertices = rescale(vertices);
@@ -212,7 +215,7 @@ function initVertexBuffers(gl) {
 
   ]; //NOT BEING USED!! SOMEHOW IT IS NOT BINDED???
 
-  g_nVerts = 20; // The number of vertices???? WHY NOT 24?????????
+  g_nVerts = 24; // The number of vertices
   console.log("THE N VALUE IS", g_nVerts);
 
   // Then in the Graphics hardware, create a vertex buffer object (VBO)
