@@ -21,11 +21,10 @@
 //    --get all dots in one color, and all lines in another color?
 //    --set each dot color individually? (what happens to the line colors?)
 // also based on: chap5 ColoredMultiObjects.js
+
 var VSHADER_SOURCE =
   'attribute vec4 a_Position;\n' +
   'uniform mat4 u_ModelMatrix;\n' +
-//   'uniform mat4 viewMatrix;\n' + //camera
-//   'uniform mat4 projectionMatrix;\n' + 
   'void main() {\n' +
 //   '  gl_Position = a_Position;\n' + //multiplying positions by matrices right to left
   '  gl_Position = u_ModelMatrix * a_Position;\n'+ 
@@ -77,11 +76,6 @@ function main() {
     console.log('Failed to intialize shaders.');
     return;
   }
-//   var vertexShader = gl.createShader(gl.VERTEX_SHADER);
-//   gl.shaderSource(vertexShader, VSHADER_SOURCE);
-//   var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-//   gl.shaderSource(fragmentShader, FSHADER_SOURCE);
-
 
   // Write buffer full of vertices to the GPU, and make it available to shaders
   g_nVerts = initVertexBuffers(gl);//setting up
@@ -114,26 +108,30 @@ function main() {
   // Transfer modelMatrix values to the u_ModelMatrix variable in the GPU
   gl.uniformMatrix4fv(u_ModelLoc, false, modelMatrix.elements);
 
+  //for static display------------------------------------------------------------------------
   // Draw 6 points. see http://www.khronos.org/opengles/sdk/docs/man/xhtml/glDrawArrays.xml
   //starting vertices 0 drawing n vertices
   //line loop draw back to the beginning
   //LINE_STRIP not close
   //gl.drawElements() 
-  gl.drawArrays(gl.TRIANGLES, 0, g_nVerts); // gl.drawArrays(mode, first, count)
+  //   gl.drawArrays(gl.TRIANGLES, 0, g_nVerts); // gl.drawArrays(mode, first, count)
 			//mode: sets drawing primitive to use. Other valid choices: 
 				// gl.LINES, gl.LINE_STRIP, gl.LINE_LOOP, 
 				// gl.TRIANGLES, gl.TRIANGLES_STRIP, gl.TRIANGLE_FAN
 			// first: index of 1st element of array.
 			// count; number of elements to read from the array.
 
-//   // That went well. Let's draw them again!
-//   //draw the points
-//   gl.drawArrays(gl.POINTS, 0, g_nVerts); // gl.drawArrays(mode, first, count)
-// 			//mode: sets drawing primitive to use. Other valid choices: 
-// 				// gl.LINES, gl.LINE_STRIP, gl.LINE_LOOP, 
-// 				// gl.TRIANGLES, gl.TRIANGLES_STRIP, gl.TRIANGLE_FAN
-// 			// first: index of 1st element of array.
-// 			// count; number of elements to read from the array.
+  // That went well. Let's draw them again!
+  //draw the points
+ // gl.drawArrays(gl.POINTS, 0, g_nVerts); // gl.drawArrays(mode, first, count)
+			//mode: sets drawing primitive to use. Other valid choices: 
+				// gl.LINES, gl.LINE_STRIP, gl.LINE_LOOP, 
+				// gl.TRIANGLES, gl.TRIANGLES_STRIP, gl.TRIANGLE_FAN
+			// first: index of 1st element of array.
+			// count; number of elements to read from the array.
+
+    //for dynamic drawing------------------------------------------------------------------------
+    //from chap5 code ColoredMultiObject.js
     var tick = function() {
         currentAngle = animate(currentAngle);  // Update the rotation angle
         draw(currentAngle, modelMatrix, u_ModelLoc);   // Draw shapes
@@ -150,20 +148,6 @@ function main() {
 
 }
 
-// var program = gl.createProgram();
-// gl.attachShader(program, vertexShader);
-// gl.attachShader(program, fragmentShader);
-// gl.linkProgram(program);
-// if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-//     console.error('ERROR linking program!', gl.getProgramInfoLog(program));
-//     return;
-// }
-// gl.validateProgram(program);
-// if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
-//     console.error('ERROR validating program!', gl.getProgramInfoLog(program));
-//     return;
-// }
-
 function initVertexBuffers(gl) {
 //==============================================================================
   var c30 = Math.sqrt(0.75);					// == cos(30deg) == sqrt(3) / 2
@@ -175,72 +159,60 @@ function initVertexBuffers(gl) {
 // z is perpendicular to the screen
 //normalize the obj file value
   var vertices = new Float32Array([
-    //top //4 for each corner, and 2 shared vertices using index arrays
-    -1.0, 1.0, -1.0, 1,
-    -1.0, 1.0, 1.0, 1,
-    1.0, 1.0, 1.0,  1,
-    1.0, 1.0, -1.0,  1,
+    //if indexArray is being used then
+    // 1,  0,  0, 1, 
+    // 0,  -1,  0, 1,
+    // -1,  0,  0, 1,
+    // 0,  1,  0, 1,
+    // 0,  0,  1, 1,
+    // 0,  0,  -1, 1,
 
-    // Left
-    -1.0, 1.0, 1.0, 1,
-    -1.0, -1.0, 1.0, 1,
-    -1.0, -1.0, -1.0, 1,
-    -1.0, 1.0, -1.0, 1,
+    //not using the indexArray
+    -1,  0,  0, 1,
+    1,  0,  0, 1,
+    0,  0,  1, 1,
 
-    // Right
-    1.0, 1.0, 1.0,   1,
-    1.0, -1.0, 1.0,  1,
-    1.0, -1.0, -1.0, 1,
-    1.0, 1.0, -1.0,  1,
+    -1,  0,  0, 1,
+    0,  -1,  0, 1,
+    0,  0,  1, 1,
 
-    // Front
-    1.0, 1.0, 1.0,   1,
-    1.0, -1.0, 1.0,  1,
-    -1.0, -1.0, 1.0, 1,
-    -1.0, 1.0, 1.0,  1,
+    0,  1,  0, 1,
+    -1,  0,  0, 1,
+    0,  0,  1, 1,
 
-    // Back
-    1.0, 1.0, -1.0,  1,
-    1.0, -1.0, -1.0, 1,
-    -1.0, -1.0, -1.0, 1,
-    -1.0, 1.0, -1.0, 1,
+    1,  0,  0, 1,
+    0,  1,  0, 1,
+    0,  0,  1, 1,
 
-    // Bottom
-    -1.0, -1.0, -1.0,  1,
-    -1.0, -1.0, 1.0,   1,
-    1.0, -1.0, 1.0,    1,
-    1.0, -1.0, -1.0,   1,
+    1,  0,  0, 1,
+    0,  -1,  0, 1,
+    0,  0,  -1, 1,
+
+    0,  -1,  0, 1,
+    -1,  0,  0, 1,
+    0,  0,  -1, 1,
+
+    0,  1,  0, 1,
+    1,  0,  0, 1,
+    0,  0,  -1, 1,
+
   ]);
   vertices = rescale(vertices);
 
   var boxIndices =
   [
-      // Top
-      0, 1, 2, //idx 0,1,2's vertices form a triangle
-      0, 2, 3,
+    2,  1,  5,
+    3,  2,  5,
+    4,  3,  5,
+    1,  4,  5,
+    1,  2,  6,
+    2,  3,  6,
+    3,  4,  6,
+    4,  1,  6,
 
-      // Left
-      5, 4, 6,
-      6, 4, 7,
+  ]; //NOT BEING USED!! SOMEHOW IT IS NOT BINDED???
 
-      // Right
-      8, 9, 10,
-      8, 10, 11,
-
-      // Front
-      13, 12, 14,
-      15, 14, 12,
-
-      // Back
-      16, 17, 18,
-      16, 18, 19,
-
-      // Bottom
-      21, 20, 22,
-      22, 20, 23
-  ];
-
-  g_nVerts = 24; // The number of vertices
+  g_nVerts = 20; // The number of vertices???? WHY NOT 24?????????
   console.log("THE N VALUE IS", g_nVerts);
 
   // Then in the Graphics hardware, create a vertex buffer object (VBO)
@@ -254,15 +226,11 @@ function initVertexBuffers(gl) {
   // COPY data from our 'vertices' array into the vertex buffer object in GPU:
   gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW); 
 
-  //another buffer -----------------------
+  //another buffer BINDING INDEX ARRAY TO VERTICES ----------------------- ??????
   // Then in the Graphics hardware, create a vertex buffer object (VBO)
-  var idxBuffer = gl.createBuffer();	// get it's 'handle'
-  if (!idxBuffer) {
-    console.log('Failed to create the index');
-    return -1;
-  }
-  gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuffer); //element array buffer for index arrays
-  gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(boxIndices), gl.STATIC_DRAW); //new float32array
+//   var idxBuffer = gl.createBuffer();	// get it's 'handle'
+//   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, idxBuffer); //element array buffer for index arrays
+//   gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(boxIndices), gl.STATIC_DRAW); //new float32array
 
   // Connect a VBO Attribute to Shaders------------------------------------------
   var a_Position = gl.getAttribLocation(gl.program, 'a_Position');
@@ -278,11 +246,6 @@ function initVertexBuffers(gl) {
   // Enable the assignment to a_Position variable
   gl.enableVertexAttribArray(a_Position);
 
-  //set default matrix to uniform
-//   var worldUniformLocation = gl.getUniformLocation(program, 'worldMatrix');
-//   var viewUniformLocation = gl.getUniformLocation(program, 'viewMatrix');
-//   var projectionUniformLocation = gl.getUniformLocation(program, 'projectionMatrix');
-
   // UNBIND the buffer object: we have filled the VBO & connected its attributes
   // to our shader, so no more modifications needed.
   gl.bindBuffer(gl.ARRAY_BUFFER, null);
@@ -290,7 +253,8 @@ function initVertexBuffers(gl) {
   return g_nVerts;
 }
 
-
+//for dynamic drawing------------------------------------------------------------------------
+//from chap5 code ColoredMultiObject.js
 function draw(currentAngle, modelMatrix, u_ModelLoc) {
     //==============================================================================
       // Clear <canvas>  colors AND the depth buffer
