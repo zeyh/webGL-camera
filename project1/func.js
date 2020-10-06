@@ -25,7 +25,7 @@ var gl;                 // WebGL's rendering context; value set in main()
 var g_nVerts;           // # of vertices in VBO; value set in main()
 
 function main(){
-    console.log("in js file...")
+    console.log("test...")
     var canvas = document.getElementById('basic-surface'); //get canvas id
     gl = getWebGLContext(canvas); //connect GL to canvas object
     if (!gl) {

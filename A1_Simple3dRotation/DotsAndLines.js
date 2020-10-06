@@ -160,53 +160,45 @@ function initVertexBuffers(gl) {
 //normalize the obj file value
   var vertices = new Float32Array([
     // //vertices connect with 1,0,0 (like a 4-claw graph)
-    // 1,  0,  0, 1, 
-    // 0,  -1,  0, 1,
+    1,  0,  0, 1, 
+    0,  -1,  0, 1,
 
-    // 1,  0,  0, 1, 
-    // 0,  1,  0, 1,
+    1,  0,  0, 1, 
+    0,  1,  0, 1,
 
-    // 1,  0,  0, 1, 
-    // 0,  0,   1, 1,
+    1,  0,  0, 1, 
+    0,  0,   1, 1,
 
-    // 1,  0,  0, 1, 
-    // 0,  0,   -1, 1,
+    1,  0,  0, 1, 
+    0,  0,   -1, 1,
 
-    // //vertices connect with -1,0,0
-    // -1,  0,  0, 1, 
-    // 0, -1, 0 ,1,
+    //vertices connect with -1,0,0
+    -1,  0,  0, 1, 
+    0, -1, 0 ,1,
 
-    // -1,  0,  0, 1, 
-    // 0, 1, 0 ,1,
+    -1,  0,  0, 1, 
+    0, 1, 0 ,1,
 
-    // -1,  0,  0, 1, 
-    // 0, 0, 1 ,1,
+    -1,  0,  0, 1, 
+    0, 0, 1 ,1,
 
-    // -1,  0,  0, 1, 
-    // 0, 0, -1 ,1,
+    -1,  0,  0, 1, 
+    0, 0, -1 ,1,
 
-    // //2 lines from top 
-    // 0,1,0,1,
-    // 0,0,1,1,
+    //2 lines from top 
+    0,1,0,1,
+    0,0,1,1,
 
-    // 0,1,0,1,
-    // 0,0,-1,1,
+    0,1,0,1,
+    0,0,-1,1,
 
-    // //2 lines from bottom
-    // 0,-1,0,1,
-    // 0,0,1,1,
+    //2 lines from bottom
+    0,-1,0,1,
+    0,0,1,1,
 
-    // 0,-1,0,1,
-    // 0,0,-1,1,
+    0,-1,0,1,
+    0,0,-1,1,
 
-    0.0,  0.5, 0.0, 1.0,	// CAREFUL! I made these into 4D points/ vertices: x,y,z,w.
-    0.0,  0.0, 0.0, 1.0,	// new point!  (? What happens if I make w=0 instead of 1.0?)
-    0.0,  0.0, 0.5, 1.0,
-    -0.5,  0.0, 0.5, 1.0,
-     -0.5,  0.0, 0.0, 1.0, 	// new point!
-     -0.5, 0.5, 0.0, 1.0,	// 
-    -0.5,  0.5, 0.5, 1.0, 	// new point!  (note we need a trailing comma here)
-     0.0,  0.5, 0.5, 1.0,
 
   ]);
   vertices = rescale(vertices);
