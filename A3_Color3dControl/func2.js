@@ -194,7 +194,7 @@ function initVertexBuffers(gl) {
 
     25,26,29,
     25,28,29,
-    25,27,29,
+    26,27,29,
     27,28,29, // back
 
  ]);
