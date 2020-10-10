@@ -110,23 +110,23 @@ function drawAll(){
     clrColr = new Float32Array(4);
     clrColr = gl.getParameter(gl.COLOR_CLEAR_VALUE);
 
-    g_modelMatrix.setTranslate(-0.4,-0.4, 0.0);  // drawing axes moved to the lower-left corner of CVV. 
-    g_modelMatrix.scale(1,1,-1); // convert to left-handed coord sys to match WebGL display canvas.
-    g_modelMatrix.scale(0.2, 0.2, 0.2);
-    g_modelMatrix.rotate(g_angle02, 0, 1, 0);  // Make new drawing axes that
-    gl.uniformMatrix4fv(g_modelMatLoc, false, g_modelMatrix.elements);
-    DrawTetra();
+    // g_modelMatrix.setTranslate(-0.4,-0.4, 0.0);  // drawing axes moved to the lower-left corner of CVV. 
+    // g_modelMatrix.scale(1,1,-1); // convert to left-handed coord sys to match WebGL display canvas.
+    // g_modelMatrix.scale(0.2, 0.2, 0.2);
+    // g_modelMatrix.rotate(g_angle02, 0, 1, 0);  // Make new drawing axes that
+    // gl.uniformMatrix4fv(g_modelMatLoc, false, g_modelMatrix.elements);
+    // DrawTetra();
 
 
-    //TODO
-    //TODO1: attach 3 parts to it &  
-    //TODO2: 'rock' by rotating the original on its x axis between 0 and 30 degrees.
-    g_modelMatrix.setTranslate(-0,-0.4, 0.0);  // drawing axes moved to the lower-left corner of CVV. 
-    g_modelMatrix.scale(1,1,-1); // convert to left-handed coord sys to match WebGL display canvas.
-    g_modelMatrix.scale(0.2, 0.2, 0.2);
-    g_modelMatrix.rotate(g_angle02, 0, 1, 0);  // Make new drawing axes that
-    gl.uniformMatrix4fv(g_modelMatLoc, false, g_modelMatrix.elements);
-    DrawTetra();
+    // //TODO
+    // //TODO1: attach 3 parts to it &  
+    // //TODO2: 'rock' by rotating the original on its x axis between 0 and 30 degrees.
+    // g_modelMatrix.setTranslate(-0,-0.4, 0.0);  // drawing axes moved to the lower-left corner of CVV. 
+    // g_modelMatrix.scale(1,1,-1); // convert to left-handed coord sys to match WebGL display canvas.
+    // g_modelMatrix.scale(0.2, 0.2, 0.2);
+    // g_modelMatrix.rotate(g_angle02, 0, 1, 0);  // Make new drawing axes that
+    // gl.uniformMatrix4fv(g_modelMatLoc, false, g_modelMatrix.elements);
+    // DrawTetra();
 
 
 

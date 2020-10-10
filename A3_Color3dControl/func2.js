@@ -32,15 +32,16 @@ var g_canvas;
 var g_modelMatrix1 = new Matrix4(); // Coordinate transformation matrix1
 var g_modelMatrix2 = new Matrix4(); // Coordinate transformation matrix2
 var g_normalMatrix = new Matrix4(); // Coordinate transformation matrix for normals
+var g_modelMatLoc;                  // that uniform's location in the GPU
 
 // * angle config
 var ANGLE_STEP = 3.0;           // The increments of rotation angle (degrees)
 var g_angle01 = 0;              // The rotation angle of part 1
-var g_angle02 = -90.0;          // The rotation angle of part 2
+var g_angle02 = 20.0;          // The rotation angle of part 2
 var g_angle01Rate = 45.0;       // rotation speed, in degrees/second                 
-var g_angle02Rate = 20.0; 
+var g_angle02Rate = 5.0; 
 var g_angle02Min = 0;  
-var g_angle02Max = 45; 
+var g_angle02Max = 30; 
 
 // * Animation config
 var g_isRun = true;                 // run/stop for animation; used in tick().
@@ -75,13 +76,6 @@ function main() {
     return;
   }
 
-  // Set the clear color and enable the depth test
-  gl.clearColor(0.2, 0.4, 0.5, 1.0);
-  gl.enable (gl.BLEND);// Enable alpha blending
-  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // Set blending function
-  gl.depthFunc(gl.LESS); //Enable 3D depth-test when drawing: don't over-draw at any pixel 
-  gl.enable(gl.DEPTH_TEST); // unless the new Z value is closer to the eye than the old one..
-
   // Get the storage locations of uniform variables
   var u_modelMatrix = gl.getUniformLocation(gl.program, 'u_modelMatrix');
   var u_normalMatrix = gl.getUniformLocation(gl.program, 'u_normalMatrix');
@@ -96,28 +90,34 @@ function main() {
   viewProjMatrix.lookAt(20.0, 10.0, 30.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
 
   // Register the event handler to be called when keys are pressed
-  document.onkeydown = function(ev){ keydown(ev, gl, g_maxVerts, viewProjMatrix, u_modelMatrix, u_normalMatrix); };
-//   window.addEventListener("keydown", myKeyDown, false);
-//   window.addEventListener("keyup", myKeyUp, false);
+//   document.onkeydown = function(ev){ keydown(ev, gl, g_maxVerts, viewProjMatrix, u_modelMatrix, u_normalMatrix); };
+  window.addEventListener("keydown", myKeyDown, false);
+  window.addEventListener("keyup", myKeyUp, false);
   window.addEventListener("mousedown", myMouseDown); 
   window.addEventListener("mousemove", myMouseMove); 
   window.addEventListener("mouseup", myMouseUp);	
   window.addEventListener("click", myMouseClick);				
   window.addEventListener("dblclick", myMouseDblClick); 
-  
-  drawAll(gl, g_maxVerts, viewProjMatrix, u_modelMatrix); 
+
+  // Set the clear color and enable the depth test
+  gl.clearColor(0.2, 0.4, 0.5, 1.0);
+  gl.enable (gl.BLEND);// Enable alpha blending
+  gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // Set blending function
+  gl.depthFunc(gl.LESS); //Enable 3D depth-test when drawing: don't over-draw at any pixel 
+  gl.enable(gl.DEPTH_TEST); // unless the new Z value is closer to the eye than the old one..
+
   // ! Animation
-//   var tick = function() {
-//     g_angle02 = animate();  // Update the rotation angle
-//     drawAll(gl, g_maxVerts, viewProjMatrix, u_modelMatrix); 
-//     document.getElementById('CurAngleDisplay').innerHTML= 
-//         'g_angle02= '+g_angle02.toFixed(5);    //reports current angle value:
-//     document.getElementById('Mouse').innerHTML=
-//         'Mouse Drag totals (CVV coords):\t'+
-//         g_xMdragTot.toFixed(5)+', \t'+g_yMdragTot.toFixed(5);//display our current mouse-dragging state:	        
-//     requestAnimationFrame(tick, g_canvas);    //Request that the browser re-draw the webpage
-//   };
-//   tick();	
+  var tick = function() {
+    g_angle02 = animate();  // Update the rotation angle
+    drawAll(gl, g_maxVerts, viewProjMatrix, u_modelMatrix); 
+    document.getElementById('CurAngleDisplay').innerHTML= 
+        'g_angle02= '+g_angle02.toFixed(5);    //reports current angle value:
+    document.getElementById('Mouse').innerHTML=
+        'Mouse Drag totals (CVV coords):\t'+
+        g_xMdragTot.toFixed(5)+', \t'+g_yMdragTot.toFixed(5);//display our current mouse-dragging state:	        
+    requestAnimationFrame(tick, g_canvas);    //Request that the browser re-draw the webpage
+  };
+  tick();	
 
 }
 
@@ -220,7 +220,7 @@ function drawAll(gl, n, viewProjMatrix, u_modelMatrix) {
   clrColr = new Float32Array(4);
   clrColr = gl.getParameter(gl.COLOR_CLEAR_VALUE);
 
-
+  // bottom left part
   g_modelMatrix1.setTranslate(-8, -8, 0); 
   g_modelMatrix1.scale(2, 2, 2);
   g_modelMatrix1.rotate(g_angle02, 0.0, 1.0, 0.0);   // Rotate around the y-axis
@@ -237,14 +237,23 @@ function drawAll(gl, n, viewProjMatrix, u_modelMatrix) {
   g_modelMatrix1.translate(0.0, 0.0, -12.0); 
   drawBox(gl, n, viewProjMatrix, u_modelMatrix); // Draw upper part
 
-
-
+  
   //upper-right part 
-  g_modelMatrix1.setTranslate(9, 9, 0); 
-  g_modelMatrix1.scale(2, 2, 2);
-  drawBox(gl, n, viewProjMatrix, u_modelMatrix); // Draw lower part
+  g_modelMatrix1.setTranslate(0.5, 0.5, 0); 
+  g_modelMatrix1.scale(1,1,-1);	
+  g_modelMatrix1.scale(0.2, 0.2,0.2);
+  drawBoxDraggable(gl, n, u_modelMatrix, g_modelMatrix1); 
+
 }
 
+function drawBoxDraggable(gl, n, u_modelMatrix, g_modelMatrix1) {
+  //perp-axis rotation for object:
+  var dist = Math.sqrt(g_xMdragTot*g_xMdragTot + g_yMdragTot*g_yMdragTot);
+  g_modelMatrix1.rotate(dist*120.0, -g_yMdragTot+0.0001, g_xMdragTot+0.0001, 0.0);
+ 
+  gl.uniformMatrix4fv(u_modelMatrix, false, g_modelMatrix1.elements);
+  gl.drawElements(gl.TRIANGLES, n, gl.UNSIGNED_BYTE, 0);
+}
 
 function drawBox(gl, n, viewProjMatrix, u_modelMatrix) { // Draw the cube
   // Calculate the model view project matrix and pass it to u_modelMatrix
@@ -262,7 +271,6 @@ function animate() {
   g_last = now; 
 
   var newAngle = g_angle02 + (g_angle02Rate * elapsed) / 1000.0;
-
   if(newAngle > g_angle02Max || newAngle < g_angle02Min ){
     g_angle02Rate = -1*g_angle02Rate;
   }
@@ -271,26 +279,6 @@ function animate() {
   return newAngle;
 }
 
-// * ==================HTML Button Callbacks 222=========================
-function keydown(ev, gl, n, viewProjMatrix, u_modelMatrix) {
-  switch (ev.keyCode) {
-    case 38: // Up arrow key -> the positive rotation of joint1 around the z-axis
-      if (g_angle02 < 135.0) g_angle02 += ANGLE_STEP;
-      break;
-    case 40: // Down arrow key -> the negative rotation of joint1 around the z-axis
-      if (g_angle02 > -135.0) g_angle02 -= ANGLE_STEP;
-      break;
-    case 39: // Right arrow key -> the positive rotation of arm1 around the y-axis
-      g_angle01 = (g_angle01 + ANGLE_STEP) % 360;
-      break;
-    case 37: // Left arrow key -> the negative rotation of arm1 around the y-axis
-      g_angle01 = (g_angle01 - ANGLE_STEP) % 360;
-      break;
-    default: return; // Skip drawing at no effective action
-  }
-  // Draw the robot arm
-  drawAll(gl, n, viewProjMatrix, u_modelMatrix);
-}
 
 // * ==================HTML Button Callbacks=========================
 function angleSubmit() {
