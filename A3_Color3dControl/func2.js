@@ -1,4 +1,5 @@
 // Adapted From: JointModel.js (c) 2012 matsuda from the textbook
+// also from ControlMulti.js
 var VSHADER_SOURCE =
   'attribute vec4 a_Position;\n' +
   'attribute vec4 a_Normal;\n' +
@@ -8,7 +9,7 @@ var VSHADER_SOURCE =
   'varying vec4 v_Color;\n' +
   'void main() {\n' +
   '  gl_Position = u_modelMatrix * a_Position;\n' +
-  '  vec3 lightDirection = normalize(vec3(0.1, 0.2, 0.3));\n' + 
+  '  vec3 lightDirection = normalize(vec3(0.1, 0.1, 0.1));\n' + 
   '  vec3 normal = normalize((u_normalMatrix * a_Normal).xyz);\n' +
   '  float nDotL = max(dot(normal, lightDirection), 0.0);\n' +
   '  v_Color = a_Color;\n' +
@@ -37,9 +38,9 @@ var g_modelMatLoc;                  // that uniform's location in the GPU
 // * angle config
 var ANGLE_STEP = 3.0;           // The increments of rotation angle (degrees)
 var g_angle01 = 0;              // The rotation angle of part 1
-var g_angle02 = 20.0;          // The rotation angle of part 2
+var g_angle02 = 25.0;          // The rotation angle of part 2
 var g_angle01Rate = 45.0;       // rotation speed, in degrees/second                 
-var g_angle02Rate = 5.0; 
+var g_angle02Rate = 10.0; 
 var g_angle02Min = 0;  
 var g_angle02Max = 30; 
 
@@ -108,7 +109,8 @@ function main() {
 
   // ! Animation
   var tick = function() {
-    g_angle02 = animate();  // Update the rotation angle
+    g_angle02 = animate2();  // Update the rotation angle
+    g_angle01 = animate1(g_angle01);  // Update the rotation angle
     drawAll(gl, g_maxVerts, viewProjMatrix, u_modelMatrix); 
     document.getElementById('CurAngleDisplay').innerHTML= 
         'g_angle02= '+g_angle02.toFixed(5);    //reports current angle value:
@@ -121,6 +123,8 @@ function main() {
 
 }
 
+// TODO: 3. change shape
+// TODO: 4. add a new shape
 // * ==================Load VBOs====================================
 function initVertexBuffers(gl) {
   var vertices = new Float32Array([   // Vertex coordinates
@@ -214,6 +218,17 @@ function initArrayBuffer(gl, data, num, type, attribute) {
     return true;
 }
 
+// * ==================handle matrices=============================
+var g_matrixStack = []; // Array for storing a matrix
+function pushMatrix(m) { // Store the specified matrix to the array
+  var m2 = new Matrix4(m);
+  g_matrixStack.push(m2);
+}
+
+function popMatrix() { // Retrieve the matrix from the array
+  return g_matrixStack.pop();
+}
+
 // * ==================Drawing====================================
 function drawAll(gl, n, viewProjMatrix, u_modelMatrix) {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
@@ -221,28 +236,34 @@ function drawAll(gl, n, viewProjMatrix, u_modelMatrix) {
   clrColr = gl.getParameter(gl.COLOR_CLEAR_VALUE);
 
   // bottom left part
-  g_modelMatrix1.setTranslate(-8, -8, 0); 
-  g_modelMatrix1.scale(2, 2, 2);
-  g_modelMatrix1.rotate(g_angle02, 0.0, 1.0, 0.0);   // Rotate around the y-axis
-  drawBox(gl, n, viewProjMatrix, u_modelMatrix); // Draw lower part
+  pushMatrix(g_modelMatrix1);
+    g_modelMatrix1.setTranslate(-8, -12, 0); 
+    g_modelMatrix1.scale(1, 8, 1);
+    g_modelMatrix1.rotate(g_angle02, 0.0, 1.0, 0.0);   // Rotate around the y-axis
+    drawBox(gl, n, viewProjMatrix, u_modelMatrix); // Draw lower part
+  g_modelMatrix1 = popMatrix();
 
-  g_modelMatrix1.translate(0.0, 2.0, 0.0); 　　　
-  g_modelMatrix1.rotate(g_angle01, 0.0, 0.0, 1.0);  // Rotate around the z-axis
-  g_modelMatrix1.scale(-2, -2, 0.2);
-  drawBox(gl, n, viewProjMatrix, u_modelMatrix); // Draw upper part
-　
-  g_modelMatrix1.translate(0.0, 0.0, 6.0); 
-  drawBox(gl, n, viewProjMatrix, u_modelMatrix); // Draw upper part
+  pushMatrix(g_modelMatrix1);
+    g_modelMatrix1.translate(-8.0, -4.0, 0.0); 　　
+    g_modelMatrix1.rotate(g_angle02, 0.0, 1.0, 0.0);  // Rotate around the z-axis
+    g_modelMatrix1.rotate(g_angle01, 0.0, 0.0, 1.0);  // Rotate around the z-axis
+    g_modelMatrix1.scale(5, 5, 0.2);
+    drawBox(gl, n, viewProjMatrix, u_modelMatrix); // Draw upper part
 
-  g_modelMatrix1.translate(0.0, 0.0, -12.0); 
-  drawBox(gl, n, viewProjMatrix, u_modelMatrix); // Draw upper part
+    g_modelMatrix1.translate(0.0, 0.0, 6.0); 
+    drawBox(gl, n, viewProjMatrix, u_modelMatrix); // Draw upper part
 
-  
+    g_modelMatrix1.translate(0.0, 0.0, -12.0); 
+    drawBox(gl, n, viewProjMatrix, u_modelMatrix); // Draw upper part
+  g_modelMatrix1 = popMatrix();
+ 
+  pushMatrix(g_modelMatrix1);
   //upper-right part 
-  g_modelMatrix1.setTranslate(0.5, 0.5, 0); 
-  g_modelMatrix1.scale(1,1,-1);	
-  g_modelMatrix1.scale(0.2, 0.2,0.2);
-  drawBoxDraggable(gl, n, u_modelMatrix, g_modelMatrix1); 
+    g_modelMatrix1.setTranslate(0.5, 0.5, 0); 
+    g_modelMatrix1.scale(1,1,-1);	
+    g_modelMatrix1.scale(0.2, 0.2,0.2);
+    drawBoxDraggable(gl, n, u_modelMatrix, g_modelMatrix1); 
+  g_modelMatrix1 = popMatrix();
 
 }
 
@@ -264,8 +285,21 @@ function drawBox(gl, n, viewProjMatrix, u_modelMatrix) { // Draw the cube
   gl.drawElements(gl.TRIANGLES, n, gl.UNSIGNED_BYTE, 0);
 }
 
+// * ==================Animation====================================
+var g_last1 = Date.now();
+function animate1(g_angle01) {
+  var now = Date.now();  // Calculate the elapsed time
+  var elapsed = now - g_last1;
+  g_last1 = now; 
+
+  var newAngle = g_angle01 + (g_angle01Rate * elapsed) / 1000.0;
+  if(newAngle > 180.0) newAngle = newAngle - 360.0;
+  if(newAngle <-180.0) newAngle = newAngle + 360.0;
+  return newAngle;
+}
+
 var g_last = Date.now();
-function animate() {
+function animate2() {
   var now = Date.now();  // Calculate the elapsed time
   var elapsed = now - g_last;
   g_last = now; 
@@ -274,11 +308,10 @@ function animate() {
   if(newAngle > g_angle02Max || newAngle < g_angle02Min ){
     g_angle02Rate = -1*g_angle02Rate;
   }
-  if(newAngle > 180.0) newAngle = newAngle - 360.0;
-  if(newAngle <-180.0) newAngle = newAngle + 360.0;
+//   if(newAngle > g_angle02Max) newAngle = 0;
+//   if(newAngle < g_angle02Min) newAngle = 0;
   return newAngle;
 }
-
 
 // * ==================HTML Button Callbacks=========================
 function angleSubmit() {
