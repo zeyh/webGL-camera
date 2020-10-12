@@ -3,18 +3,47 @@
 <html lang="en">
 	<head>
 		<meta charset="utf-8" />
-        <title>Project 1</title>
+            <link href="https://fonts.googleapis.com/css2?family=Annie+Use+Your+Telescope&family=Caveat&display=swap" rel="stylesheet">        <title>Project 1</title>
+            <style>
+                body {
+                    background: black;
+                }
+                .instructions {
+                    color: #fff;
+                    font-family: 'Annie Use Your Telescope', cursive;
+                    font-size: 25px;
+                    position: absolute;
+                    top:20px;
+                    left:30px;
+                }
+                .details {
+                    position: absolute;
+                    bottom: 3%;
+                    color:  #bfbfbd;
+                }
+            </style>
 	</head>
 	<body onload="main();">
-		<canvas id="basic-surface" width="600" height="600">
+		<canvas id="webgl" width="600" height="600">
 			Please use a browser that supports "canvas"
 		</canvas>
-		<hr />
-		<i>test123321</i>
+        <div class= "instructions">
+            <p >⚡️ - draggable</p>
+        </div>
+
+
+        <div class="details">
+            <hr />
+            <div id='CurAngleDisplay'></div> 
+            <span id='MouseAtResult'  >   Mouse At: </span> 
+            <span id='MouseDragResult'> Mouse Drag: </span> 
+            <div id='Mouse'> Mouse Drag totals (CVV coords) </div>
+        </div>
+
         <script src="../lib/webgl-utils.js"></script>
         <script src="../lib/webgl-debug.js"></script>
         <script src="../lib/cuon-utils.js"></script>
-        <script src="../lib/cuon-matrix-quat03.js"></script>
-		<script src="func1.js"></script>
+        <script src="../lib/cuon-matrix.js"></script>
+		<script src="func.js"></script>
 	</body>
 </html>

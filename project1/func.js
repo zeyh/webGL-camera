@@ -1,282 +1,833 @@
 //init shaders
 var VSHADER_SOURCE = [
     'precision mediump float;',
-    'attribute vec3 a_Position;',
-    'attribute vec3 a_Color;',
-    'varying vec3 v_Color;',
-    'uniform mat4 u_ModelMatrix;',
+    'attribute vec4 a_Position;',
+    'attribute vec4 a_Color;',
+    'attribute vec4 a_Normal;',
+    'uniform mat4 u_modelMatrix;',
+    'uniform mat4 u_normalMatrix;',
+    'varying vec4 v_Color;',
     'void main() {',
-    '    gl_Position = u_ModelMatrix * vec4(a_Position, 1.0);',
-    '    gl_PointSize = 10.0;',
+    '    gl_Position = u_modelMatrix * a_Position;',
+    '    vec3 lightDirection = normalize(vec3(0, 0, 0));',
+    '    vec3 normal = normalize((u_normalMatrix * a_Normal).xyz);',
+    '    float nDotL = max(dot(normal, lightDirection), 0.0);',
     '    v_Color = a_Color;',
     '}'
     ].join('\n');
 
 var FSHADER_SOURCE = [
-    'precision mediump float;',
-    'varying vec3 v_Color;',
+    '#ifdef GL_ES',
+    '  precision mediump float;',
+    '#endif',
+    'varying vec4 v_Color;',
     'void main() {',
-    '   gl_FragColor = vec4(v_Color, 1.0);',
+    '  gl_FragColor = v_Color;',
     '}',
     ].join('\n');
 
-var ANGLE_STEP = 30.0;  // -- Rotation angle rate (degrees/second)
+// * for WebGL 
 var gl;                 // WebGL's rendering context; value set in main()
-var g_nVerts;           // # of vertices in VBO; value set in main()
+var g_canvas; 
 
-function main(){
-    console.log("test...")
-    var canvas = document.getElementById('basic-surface'); //get canvas id
-    gl = getWebGLContext(canvas); //connect GL to canvas object
+// * matrix 
+var g_modelMatrix1 = new Matrix4(); // Coordinate transformation matrix1
+var g_modelMatrix2 = new Matrix4(); // Coordinate transformation matrix2
+var g_normalMatrix = new Matrix4(); // Coordinate transformation matrix for normals
+var g_modelMatLoc;                  // that uniform's location in the GPU
+
+// * angle config
+var ANGLE_STEP = 3.0;           // The increments of rotation angle (degrees)
+var g_angle01 = 0;              // The rotation angle of part 1
+var g_angle02 = 25.0;          // The rotation angle of part 2
+var g_angle01Rate = 45.0;       // rotation speed, in degrees/second                 
+var g_angle02Rate = 40.0; 
+var g_angle02Min = 0;  
+var g_angle02Max = 70; 
+var g_rainNum = 3;
+// * Animation config
+var g_isRun = true;                 // run/stop for animation; used in tick().
+var g_lastMS = Date.now();    		// Timestamp for most-recently-drawn image; 
+// * HTML events
+var g_isDrag=false;		// mouse-drag: true when user holds down mouse button
+var g_xMclik=0.0;		// last mouse button-down position (in CVV coords)
+var g_yMclik=0.0;   
+var g_xMdragTot=0.0;	// total (accumulated) mouse-drag amounts (in CVV coords).
+var g_yMdragTot=0.0;  
+var seed;
+function main() {
+    console.log("now I'm in js file...");
+    g_canvas = document.getElementById('webgl');
+    // Get the rendering context for WebGL
+    var gl = getWebGLContext(g_canvas);
     if (!gl) {
         console.log('Failed to get the rendering context for WebGL');
         return;
     }
 
-    //init shaders //https://www.youtube.com/watch?v=33gn3_khXxw&list=PLjcVFFANLS5zH_PeKC6I8p0Pt1hzph_rt&index=5
+    // Initialize shaders
     if (!initShaders(gl, VSHADER_SOURCE, FSHADER_SOURCE)) {
         console.log('Failed to intialize shaders.');
         return;
     }
-    // var vertexShader = gl.createShader(gl.VERTEX_SHADER);
-    // var fragmentShader = gl.createShader(gl.FRAGMENT_SHADER);
-    // gl.shaderSource(vertexShader, VSHADER_SOURCE);
-    // gl.shaderSource(fragmentShader, FSHADER_SOURCE);
-    // gl.compileShader(vertexShader);
-	// if (!gl.getShaderParameter(vertexShader, gl.COMPILE_STATUS)) {
-	// 	console.error('ERROR compiling vertex shader!', gl.getShaderInfoLog(vertexShader));
-	// 	return;
-	// }
-	// gl.compileShader(fragmentShader);
-	// if (!gl.getShaderParameter(fragmentShader, gl.COMPILE_STATUS)) {
-	// 	console.error('ERROR compiling fragment shader!', gl.getShaderInfoLog(fragmentShader));
-	// 	return;
-    // }
-    // var program = gl.createProgram();
-    // gl.attachShader(program, vertexShader);
-	// gl.attachShader(program, fragmentShader);
-    // gl.linkProgram(program);
-    // if (!gl.getProgramParameter(program, gl.LINK_STATUS)) {
-	// 	console.error('Failed to link program.');
-	// 	return;
-    // }
-    // gl.validateProgram(program);
-	// if (!gl.getProgramParameter(program, gl.VALIDATE_STATUS)) {
-	// 	console.error('ERROR validating program!', gl.getProgramInfoLog(program));
-	// 	return;
-	// }
 
-    // Get handle to graphics system's storage location of u_ModelMatrix
-    var u_ModelLoc = gl.getUniformLocation(gl.program, 'u_ModelMatrix');
-    if (!u_ModelLoc) { 
-        console.log('Failed to get the storage location of u_ModelMatrix');
-        return;
+
+    // Set the vertex information
+    // Assign the buffer object to the attribute variable
+    gl.program.a_Position = gl.getAttribLocation(gl.program, 'a_Position');
+    gl.program.a_Color = gl.getAttribLocation(gl.program, 'a_Color');
+    gl.program.a_Normal = gl.getAttribLocation(gl.program, 'a_Normal');
+    if (! gl.program.a_Position) {
+      console.log('Failed to get the storage location');
+      return false;
     }
-    var modelMatrix = new Matrix4(); // Create a local version of our model matrix in JavaScript 
-    modelMatrix.setIdentity();
-    gl.uniformMatrix4fv(u_ModelLoc, false, modelMatrix.elements); // Transfer modelMatrix values to the u_ModelMatrix variable in the GPU
 
 
-    // Write buffer full of vertices to the GPU, and make it available to shaders
-    g_nVerts = initVertexBuffers(gl);//setting up
-    if (g_nVerts < 0) {
-        console.log('Failed to load vertices into the GPU');
+    var shape1 = initVertexBuffersForShape1(gl);
+    var shape2 = initVertexBuffersForShape2(gl);
+    var shape3 = initVertexBuffersForShape3(gl);
+    if (! shape1 || !shape2 || !shape3) {
+        console.log('Failed to set the vertex information');
         return;
     }
 
-    //draw
-    gl.enable(gl.DEPTH_TEST);  //Enable 3D depth-test when drawing
-    // gl.clearColor(0.75, 0.85, 0.8, 1.0);
-	// gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
-    // gl.drawElements(gl.TRIANGLES, 12, gl.UNSIGNED_SHORT, 0);
-    var currentAngle = 0.0;
+    // Get the storage locations of uniform variables
+    var u_modelMatrix = gl.getUniformLocation(gl.program, 'u_modelMatrix');
+    var u_normalMatrix = gl.getUniformLocation(gl.program, 'u_normalMatrix');
+    if (!u_modelMatrix || !u_normalMatrix) {
+        console.log('Failed to get the storage location');
+        return;
+    }
+
+    // Calculate the view projection matrix
+    var viewProjMatrix = new Matrix4();
+    viewProjMatrix.setPerspective(50.0, g_canvas.width / g_canvas.height, 1.0, 100.0);
+    viewProjMatrix.lookAt(20.0, 10.0, 30.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+
+    // Register the event handler to be called when keys are pressed
+    window.addEventListener("mousedown", myMouseDown); 
+    window.addEventListener("mousemove", myMouseMove); 
+    window.addEventListener("mouseup", myMouseUp);	
+
+
+    // Set the clear color and enable the depth test
+    gl.clearColor(0.1, 0.1, 0.2, 1.0);
+    gl.enable (gl.BLEND);// Enable alpha blending
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // Set blending function
+    gl.depthFunc(gl.LESS); //Enable 3D depth-test when drawing: don't over-draw at any pixel 
+    gl.enable(gl.DEPTH_TEST); // unless the new Z value is closer to the eye than the old one..
+
+
+    // drawAll(gl, [shape1, shape2], viewProjMatrix, u_modelMatrix); 
+    // ! Animation
     var tick = function() {
-        currentAngle = animate(currentAngle);  // Update the rotation angle
-        draw(currentAngle, modelMatrix, u_ModelLoc);   // Draw shapes
-        // console.log('currentAngle=',currentAngle);
-        requestAnimationFrame(tick, canvas);                                        
+        seed = Math.random();
+        g_angle02 = animate2();  // Update the rotation angle
+        g_angle01 = animate1(g_angle01);  // Update the rotation angle
+        drawAll(gl, [shape1, shape2, shape3], viewProjMatrix, u_modelMatrix); 
+        document.getElementById('CurAngleDisplay').innerHTML= 
+            'g_angle02= '+g_angle02.toFixed(5);    //reports current angle value:
+        document.getElementById('Mouse').innerHTML=
+            'Mouse Drag totals (CVV coords):\t'+
+            g_xMdragTot.toFixed(5)+', \t'+g_yMdragTot.toFixed(5);//display our current mouse-dragging state:	        
+        requestAnimationFrame(tick, g_canvas);    //Request that the browser re-draw the webpage
     };
-    tick();							             
-}
-
-function draw(currentAngle, modelMatrix, u_ModelLoc) {
-    gl.clearColor(0.5, 0.5, 0.5, 1.0); //set canvas color
-    gl.clear(gl.DEPTH_BUFFER_BIT | gl.COLOR_BUFFER_BIT);
-    
-    modelMatrix.setTranslate(0, 0, 0.0);   
-    modelMatrix.scale(1,1,-1);	// convert to left-handed coord sys to match WebGL display canvas.
-    modelMatrix.scale(0.5, 0.5, 0.5);
-    modelMatrix.rotate(currentAngle, 1, 1, 1);  // Make new drawing axes that
-    gl.uniformMatrix4fv(u_ModelLoc, false, modelMatrix.elements); // Pass our current matrix to the vertex shaders:
-    
-    // gl.drawArrays(gl.TRIANGLES, 0, 23); //LINE_LOOP //start at 0 draw to 36
-    gl.drawElements(gl.TRIANGLES, g_nVerts-1, gl.UNSIGNED_SHORT, 0); //boxIndices.length-1
-    // gl.drawElements(gl.LINE_LOOP, 35, gl.UNSIGNED_SHORT, 0); //boxIndices.length-1
+    tick();	
 
 }
 
-function initVertexBuffers(gl) {
-    // var vertices = new Float32Array([
-	//     // X, Y, Z           R, G, B
-	// 	// Top
-	// 	-1.0, 1.0, -1.0, 1,   0.5, 0.5, 0.5,   1,
-	// 	-1.0, 1.0, 1.0, 1,      0.5, 0.5, 0.5, 1,
-	// 	1.0, 1.0, 1.0,   1,     0.5, 0.5, 0.5, 1,
-	// 	1.0, 1.0, -1.0,  1,     0.5, 0.5, 0.5, 1,
-	// 	// Left
-	// 	-1.0, 1.0, 1.0,  1,     0.75, 0.25, 0.5, 1,
-	// 	-1.0, -1.0, 1.0,  1,    0.75, 0.25, 0.5, 1,
-	// 	-1.0, -1.0, -1.0,  1,   0.75, 0.25, 0.5, 1,
-	// 	-1.0, 1.0, -1.0,  1,    0.75, 0.25, 0.5, 1,
-	// 	// Right
-	// 	1.0, 1.0, 1.0,  1,     0.25, 0.25, 0.75, 1,
-	// 	1.0, -1.0, 1.0,  1,    0.25, 0.25, 0.75, 1,
-	// 	1.0, -1.0, -1.0,  1,   0.25, 0.25, 0.75, 1,
-	// 	1.0, 1.0, -1.0,  1,    0.25, 0.25, 0.75, 1,
-	// 	// Front
-	// 	1.0, 1.0, 1.0,  1,     1.0, 0.0, 0.15,   1,
-	// 	1.0, -1.0, 1.0, 1,      1.0, 0.0, 0.15,  1,
-	// 	-1.0, -1.0, 1.0,  1,     1.0, 0.0, 0.15, 1,
-	// 	-1.0, 1.0, 1.0,   1,    1.0, 0.0, 0.15,  1,
-	// 	// Back
-	// 	1.0, 1.0, -1.0, 1,      0.0, 1.0, 0.15,   1,
-	// 	1.0, -1.0, -1.0,  1,     0.0, 1.0, 0.15,  1,
-	// 	-1.0, -1.0, -1.0,  1,     0.0, 1.0, 0.15, 1,
-	// 	-1.0, 1.0, -1.0,   1,    0.0, 1.0, 0.15,  1,
-	// 	// Bottom
-	// 	-1.0, -1.0, -1.0, 1,     0.5, 0.5, 1.0,   1,
-	// 	-1.0, -1.0, 1.0,  1,     0.5, 0.5, 1.0,   1,
-	// 	1.0, -1.0, 1.0,  1,      0.5, 0.5, 1.0,   1,
-	// 	1.0, -1.0, -1.0,  1,     0.5, 0.5, 1.0,   1,
-    // ]);
-    var vertices = new Float32Array([
-	    // X, Y, Z           R, G, B
-		// Top
-		-1.0, 1.0, -1.0,    0.5, 0.5, 0.5,   
-		-1.0, 1.0, 1.0,      0.5, 0.5, 0.5, 
-		1.0, 1.0, 1.0,      0.5, 0.5, 0.5, 
-		1.0, 1.0, -1.0,      0.5, 0.5, 0.5, 
-		// Left
-		-1.0, 1.0, 1.0,        0.75, 0.25, 0.5,  
-		-1.0, -1.0, 1.0,       0.75, 0.25, 0.5,  
-		-1.0, -1.0, -1.0,      0.75, 0.25, 0.5,  
-		-1.0, 1.0, -1.0,       0.75, 0.25, 0.5,  
-		// Right
-		1.0, 1.0, 1.0,        0.25, 0.25, 0.75,  
-		1.0, -1.0, 1.0,       0.25, 0.25, 0.75,  
-		1.0, -1.0, -1.0,      0.25, 0.25, 0.75,  
-		1.0, 1.0, -1.0,       0.25, 0.25, 0.75,  
-		// Front
-		1.0, 1.0, 1.0,        1.0, 0.0, 0.15,    
-		1.0, -1.0, 1.0,        1.0, 0.0, 0.15,   
-		-1.0, -1.0, 1.0,        1.0, 0.0, 0.15,  
-		-1.0, 1.0, 1.0,        1.0, 0.0, 0.15,   
-		// Back
-		1.0, 1.0, -1.0,        0.0, 1.0, 0.15,    
-		1.0, -1.0, -1.0,        0.0, 1.0, 0.15,   
-		-1.0, -1.0, -1.0,        0.0, 1.0, 0.15,  
-		-1.0, 1.0, -1.0,        0.0, 1.0, 0.15,   
-		// Bottom
-		-1.0, -1.0, -1.0,       0.5, 0.5, 1.0,    
-		-1.0, -1.0, 1.0,        0.5, 0.5, 1.0,    
-		1.0, -1.0, 1.0,         0.5, 0.5, 1.0,    
-		1.0, -1.0, -1.0,        0.5, 0.5, 1.0,    
-	]);
-	var indices = new Uint16Array([ 
-		// Top
-		0, 1, 2,
-		0, 2, 3,
-		// Left
-		5, 4, 6,
-		6, 4, 7,
-		// Right
-		8, 9, 10,
-		8, 10, 11,
-		// Front
-		13, 12, 14,
-		15, 14, 12,
-		// Back
-		16, 17, 18,
-		16, 18, 19,
-		// Bottom
-		21, 20, 22,
-		22, 20, 23
-	]);
-    console.log(indices.length);
-    //create VBO in hardware
-    // var colorBuffer = gl.createBuffer();
-    // gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
-    // gl.bindBuffer(gl.ARRAY_BUFFER, colorBuffer);
-    var vertexBuffer = gl.createBuffer();
-    if (!vertexBuffer) {
-        console.log('Failed to create the vertex buffer object');
+// TODO: 3. animation
+// TODO: 4. several sequential, moving joints
+// TODO: 5. Keyboard Interaction
+// TODO: 7. user-adjustable color for one 3D part
+// TODO: 8. user-adjustable flex-angle
+// TODO: 9. webpage controls & features (dat.gui)
+// TODO: 10. User Instructions
+
+// * ==================Load VBOs====================================
+function initVertexBuffersForShape1(gl) { //semi-sphere
+    var vertices = new Float32Array([   
+        1.0, 1.0, 1.0,  
+        -1.0, 1.0, 1.0,  
+        -2.5,-2.5, 2.5,   
+        2.5, -2.5, 2.5,    // v0-v1-v2-v3 front
+        0,   0,  2,
+        
+        1.0, 1.0, 1.0,   
+        2.5,-2.5, 2.5,   
+        2.5,-2.5,-2.5,   
+        1.0, 1.0,-1.0,    // v0-v3-v4-v5 right
+        2,0,0,
+
+        1.0, 1.0, 1.0,   
+        1.0, 1.0,-1.0,  
+        -1.0, 1.0,-1.0,  
+        -1.0, 1.0, 1.0,    // v0-v5-v6-v1 up
+        0,1.5,0,
+
+        -1.0, 1.0, 1.0,  
+        -1.0, 1.0,-1.0,  
+        -2.5,-2.5,-2.5,  
+        -2.5,-2.5, 2.5,    // v1-v6-v7-v2 left
+        -2,0,0,
+
+        // v7-v4-v3-v2 down
+        -2.5,-2.5,-2.5,   //20
+        2.5,-2.5,-2.5,    //21
+        2.5,-2.5, 2.5,    //22
+        -2.5,-2.5, 2.5,   //23
+
+        -2.8,-4,-2.8,   //24
+        2.8,-4,-2.8,    //25
+        2.8,-4, 2.8,    //26
+        -2.8,-4, 2.8,   //27
+        0,-5,0,     //28
+        
+
+
+
+        2.5,-2.5,-2.5,  
+        -2.5,-2.5,-2.5,  
+        -1.0, 1.0,-1.0,   
+        1.0, 1.0,-1.0,     // v4-v7-v6-v5 back
+        0.0,   0.0,   -2,
+    ]);
+
+    var indices = new Uint8Array([
+        0, 1, 4, 
+        0, 3, 4,  
+        1,2,4,
+        2,3,4, // front
+
+        5,6,9, 
+        5,8,9,
+        6,7,9,
+        7,8,9,  // right
+
+        10,11,14,
+        10,13,14,
+        11,12,14,
+        12,13,14,    // up
+
+        15,16,19,
+        15,18,19,
+        16,17,19,
+        17,18,19,   // left
+
+        20,24,27,
+        20,23,27,
+        23,22,27,
+        22,27,26,
+        22,26,25,
+        22,25,21,
+        25,21,20,
+        25,24,20,
+        25,24,28,
+        25,26,28,
+        24,27,28,
+        27,26,28,
+        28,26,25, // down
+
+
+        29,30,33,
+        29,32,33,
+        30,31,33,
+        31,32,33, // back
+
+    ]);
+ 
+    var normals = new Float32Array([
+        0.0, 0.0, 1.0,  
+        0.0, 0.0, 1.0,  
+        0.0, 0.0, 1.0,  
+        0.0, 0.0, 1.0, // v0-v1-v2-v3 front
+        0.0, 0.0, 1.0, 
+
+        1.0, 0.0, 0.0,  
+        1.0, 0.0, 0.0,  
+        1.0, 0.0, 0.0,  
+        1.0, 0.0, 0.0, // v0-v3-v4-v5 right
+        1.0, 0.0, 0.0,
+
+        0.0, 1.0, 0.0,  
+        0.0, 1.0, 0.0,  
+        0.0, 1.0, 0.0,  
+        0.0, 1.0, 0.0, // v0-v5-v6-v1 up
+        0.0, 1.0, 0.0, 
+
+        -1.0, 0.0, 0.0, 
+        -1.0, 0.0, 0.0, 
+        -1.0, 0.0, 0.0, 
+        -1.0, 0.0, 0.0, // v1-v6-v7-v2 left
+        -1.0, 0.0, 0.0,
+
+        0.0,-1.0, 0.0,  
+        0.0,-1.0, 0.0,  
+        0.0,-1.0, 0.0,  
+        0.0,-1.0, 0.0, // v7-v4-v3-v2 down
+        0.0,-1.0, 0.0,
+        0.0,-1.0, 0.0,
+        0.0,-1.0, 0.0,
+        0.0,-1.0, 0.0,
+        0.0,-1.0, 0.0,
+
+        0.0, 0.0,-1.0,  
+        0.0, 0.0,-1.0,  
+        0.0, 0.0,-1.0,  
+        0.0, 0.0,-1.0,  // v4-v7-v6-v5 back
+        0.0, 0.0,-1.0,  
+    ]);
+
+    var colors = new Float32Array([   
+        81/255, 173/255, 207/255, 1,
+        250/255, 220/255, 170/255, 1,
+        15/255, 48/255, 87/255, 1,
+        15/255, 48/255, 87/255, 1, 
+        250/255, 208/255, 191/255, 1, //front
+        
+        81/255, 173/255, 207/255, 1,
+        15/255, 48/255, 87/255, 1,
+        15/255, 48/255, 87/255, 1,
+        81/255, 173/255, 207/255, 1, 
+        232/255, 255/255, 255/255, 1, //right
+        
+        81/255, 173/255, 207/255, 1,
+        81/255, 173/255, 207/255, 1,
+        232/255, 255/255, 255/255,1,
+        250/255, 220/255, 170/255, 1, 
+        250/255, 220/255, 170/255, 1, //up
+        
+        250/255, 220/255, 170/255, 1,
+        232/255, 255/255, 255/255, 1,
+        15/255, 48/255, 87/255, 1,
+        15/255, 48/255, 87/255, 1, 
+        250/255, 220/255, 170/255, 1, //left
+
+        15/255, 48/255, 87/255, 1,
+        15/255, 48/255, 87/255, 1,
+        15/255, 48/255, 87/255, 1,
+        15/255, 48/255, 87/255, 1, 
+        15/255, 48/255, 87/255, 1,
+        15/255, 48/255, 87/255, 1,
+        42/255, 60/255, 87/255, 1,
+        28/255, 48/255, 74/255, 1, 
+        0/255, 88/255, 122/255, 1, //down
+
+        15/255, 48/255, 87/255, 1,
+        15/255, 48/255, 87/255, 1,
+        232/255, 255/255, 255/255,1,
+        81/255, 173/255, 207/255, 1, 
+        232/255, 255/255, 255/255, 1, //back
+         
+    ]);
+
+    var o = new Object(); // Utilize Object object to return multiple buffer
+    // Write the vertex property to Buffer Objects
+    o.vertexBuffer = initArrayBuffer(gl, vertices, 3, gl.FLOAT, 'a_Position');
+    o.normalBuffer = initArrayBuffer(gl, normals, 3, gl.FLOAT, 'a_Normal');
+    o.colorBuffer = initArrayBuffer(gl, colors, 4, gl.FLOAT, 'a_Color');
+    o.indexBuffer = initIndexBuffer(gl, indices, gl.UNSIGNED_BYTE);
+    o.numIndices = indices.length;
+    if (!o.vertexBuffer ||  !o.colorBuffer || !o.normalBuffer || !o.indexBuffer){
+        console.log("fail to Write the vertex property to Buffer Objects")
         return -1;
     }
-    gl.bindBuffer(gl.ARRAY_BUFFER, vertexBuffer);
-    gl.bufferData(gl.ARRAY_BUFFER, vertices, gl.STATIC_DRAW);
 
-    var indexBuffer = gl.createBuffer();
-    if (!indexBuffer) {
+    // // Unbind the buffer object
+    // gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    // gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+
+    return o;
+}
+
+function initVertexBuffersForShape2(gl) { //⚡️
+    var vertices = new Float32Array([   
+        //front
+        0.5, 2,    -0.5,  //0
+        -1,  0,    0,  //1
+        -0.5, -0.5,0,  //2
+        -1,  -3,   -0.5,  //3
+        1,   0,    0,  //4
+        0,  0.2,   0,  //5
+
+        -1,0,-1, //6
+        0,0.2,-1,  //7
+
+        -0.5, -0.5,-1, //6
+        1,   0,-1,  //7
+    ]);
+
+    var indices = new Uint8Array([
+        0,1,5,
+        1,2,5,
+        2,4,5,
+        2,3,4,
+
+        0,6,7,
+        0,1,6,
+        0,5,7,
+        1,5,7,
+        1,6,7,
+
+        2,3,8,
+        3,8,9,
+        3,4,9,
+        2,4,8,
+        4,8,9,
+
+        4,5,7,
+        4,7,9,
+
+        6,7,8,
+        7,8,9,
+
+        1,2,6,
+        2,6,8,
+
+    ]);
+ 
+    var normals = new Float32Array([
+        0.0, 0.0, 1.0,  
+        0.0, 0.0, 1.0,  
+
+        0.0, 0.0, 1.0,  
+        0.0, 0.0, 1.0, 
+
+        0.0, 0.0, 1.0, 
+        0.0, 0.0, 1.0, 
+
+
+        0.0, 1.0, 0.0, 
+        0.0, 1.0, 0.0, 
+
+        0.0, 1.0, 0.0, 
+        0.0, 1.0, 0.0, 
+    ]);
+
+    var colors = new Float32Array([   
+        204/255, 102/255, 0/255, 1,
+        204/255, 102/255, 51/255, 1,
+
+        204/255, 102/255, 51/255, 1,
+        255/255, 255/255, 0/255, 1, 
+
+        255/255, 255/255, 200/255,  1, 
+        255/255, 153/255, 51/255,1, //front
+
+        204/255, 102/255, 51/255, 1, //front
+        255/255, 153/255, 51/255, 1, //front
+
+        255/255, 153/255, 51/255, 1, //front
+        255/255, 255/255, 153/255, 1, //front
+ 
+         
+    ]);
+
+    var o = new Object(); // Utilize Object object to return multiple buffer
+    // Write the vertex property to Buffer Objects
+    o.vertexBuffer = initArrayBuffer(gl, vertices, 3, gl.FLOAT, 'a_Position');
+    o.normalBuffer = initArrayBuffer(gl, normals, 3, gl.FLOAT, 'a_Normal');
+    o.colorBuffer = initArrayBuffer(gl, colors, 4, gl.FLOAT, 'a_Color');
+    o.indexBuffer = initIndexBuffer(gl, indices, gl.UNSIGNED_BYTE);
+    o.numIndices = indices.length;
+    if (!o.vertexBuffer ||  !o.colorBuffer || !o.normalBuffer || !o.indexBuffer){
+        console.log("fail to Write the vertex property to Buffer Objects")
+        return -1;
+    }
+
+    // Unbind the buffer object
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+
+    return o;
+}
+
+function initVertexBuffersForShape3(gl) { // full sphere from Shadow_highp.js (c) 2012 matsuda and tanaka
+    var SPHERE_DIV = 5;
+  
+    var i, ai, si, ci;
+    var j, aj, sj, cj;
+    var p1, p2;
+  
+    var vertices = [];
+    var indices = [];
+    var colors = [];
+  
+    // Generate coordinates
+    for (j = 0; j <= SPHERE_DIV; j++) {
+      aj = j * Math.PI / SPHERE_DIV;
+      sj = Math.sin(aj);
+      cj = Math.cos(aj);
+      for (i = 0; i <= SPHERE_DIV; i++) {
+        ai = i * 2 * Math.PI / SPHERE_DIV;
+        si = Math.sin(ai);
+        ci = Math.cos(ai);
+        vertices.push(si * sj);  // X
+        vertices.push(cj);       // Y
+        vertices.push(ci * sj);  // Z
+      }
+    }
+  
+    // Generate indices
+    for (j = 0; j < SPHERE_DIV; j++) {
+      for (i = 0; i < SPHERE_DIV; i++) {
+        p1 = j * (SPHERE_DIV+1) + i;
+        p2 = p1 + (SPHERE_DIV+1);
+  
+        indices.push(p1);
+        indices.push(p2);
+        indices.push(p1 + 1);
+  
+        indices.push(p1 + 1);
+        indices.push(p2);
+        indices.push(p2 + 1);
+      }
+    }
+
+    // colors
+    for (j = 0; j <= SPHERE_DIV; j++) {
+        for (i = 0; i <= SPHERE_DIV; i++) {
+          colors.push( (j-1)/SPHERE_DIV  );  // X
+          colors.push( (j-1)/SPHERE_DIV + 0.05);       // Y
+          colors.push( (j-1)/SPHERE_DIV + 0.2);  // Z
+          colors.push(1);
+        }
+      }
+  
+    var o = new Object(); // Utilize Object object to return multiple buffer objects together
+  
+    // Write vertex information to buffer object
+    o.vertexBuffer = initArrayBuffer(gl, new Float32Array(vertices), 3, gl.FLOAT);
+    o.colorBuffer = initArrayBuffer(gl, new Float32Array(colors), 4, gl.FLOAT);
+    o.normalBuffer = initArrayBuffer(gl, new Float32Array(vertices), 3, gl.FLOAT);
+    o.indexBuffer = initIndexBuffer(gl, new Uint8Array(indices), gl.UNSIGNED_BYTE);
+    o.numIndices = indices.length;
+    if (!o.vertexBuffer || !o.colorBuffer || !o.indexBuffer) return null; 
+  
+  
+    // Unbind the buffer object
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+  
+    return o;
+}
+  
+function initIndexBuffer(gl,data, type){
+    // bind the index array
+    var buffer = gl.createBuffer();
+    if (!buffer) {
         console.log('Failed to create the index buffer object');
         return -1;
     }
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuffer);
-    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, indices, gl.STATIC_DRAW);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, data, gl.STATIC_DRAW);
+    buffer.type = type;
+    return buffer;
+}
 
-    //Connect a VBO Attribute to Shaders
-    var a_PositionLoc = gl.getAttribLocation(gl.program, 'a_Position');
-    if (a_PositionLoc < 0) {
-        console.log('Failed to get attribute storage location of a_Position');
-        return -1;
+function initArrayBuffer(gl, data, num, type, attribute) {
+    // Create a buffer object
+    var buffer = gl.createBuffer();
+    if (!buffer) {
+      console.log('Failed to create the buffer object');
+      return false;
     }
-    gl.vertexAttribPointer(
-		a_PositionLoc, // Attribute location
-		3, // Number of elements per attribute
-		gl.FLOAT, // Type of elements
-		false,
-		6 * vertices.BYTES_PER_ELEMENT, // Size of an individual vertex
-		0 // Offset from the beginning of a single vertex to this attribute
-    );
-    gl.enableVertexAttribArray(a_PositionLoc);
-    var a_ColorLoc = gl.getAttribLocation(gl.program, 'a_Color');
-    if(a_ColorLoc < 0) {
-        console.log('Failed to get the attribute storage location of a_Color');
-        return -1;
-    }
-    gl.vertexAttribPointer(
-		a_ColorLoc, 
-		3, 
-		gl.FLOAT,
-		false,
-		6 * vertices.BYTES_PER_ELEMENT, 
-		3 * vertices.BYTES_PER_ELEMENT
-    );
-    gl.enableVertexAttribArray(a_ColorLoc);
+    // Write date into the buffer object
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, data, gl.STATIC_DRAW);
 
-    return indices.length;
+    buffer.num = num;
+    buffer.type = type;
+
+    return buffer;
 }
 
 
+// * ==================Drawing====================================
+function drawAll(gl, shapeArr, viewProjMatrix, u_modelMatrix) { //draw all the shape
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    clrColr = new Float32Array(4);
+    clrColr = gl.getParameter(gl.COLOR_CLEAR_VALUE);
+    pushMatrix(g_modelMatrix1);
+        for(var i=0; i<g_rainNum; i++){
+            let seed3 = Math.random();
+            g_modelMatrix1.setTranslate(-0.7+g_angle02/100 + i/g_rainNum, -1*seed3+0.1, 0); 	
+            g_modelMatrix1.scale(0.02, 0.05, 0.02);
+            draw(gl, shapeArr[2], u_modelMatrix, g_modelMatrix1); 
+        }
+    g_modelMatrix1 = popMatrix();
+
+    pushMatrix(g_modelMatrix1);
+        g_modelMatrix1.setTranslate(0, -0.1, 0); 
+        g_modelMatrix1.scale(1,1,-1);	
+        g_modelMatrix1.scale(0.12, 0.12, 0.12);
+        drawShapeDraggable(gl, shapeArr[1], u_modelMatrix, g_modelMatrix1); 
+    g_modelMatrix1 = popMatrix();
+
+    pushMatrix(g_modelMatrix1);
+        g_modelMatrix1.setTranslate(0, 0.6, 0); 
+        g_modelMatrix1.scale(1,1,-1);	
+        g_modelMatrix1.scale(0.12, 0.12, 0.12);
+        draw(gl, shapeArr[0], u_modelMatrix, g_modelMatrix1); 
+    g_modelMatrix1 = popMatrix();
+
+    pushMatrix(g_modelMatrix1);
+        g_modelMatrix1.setTranslate(0.5, 0.46, 0);
+        g_modelMatrix1.scale(1,1,-1);	
+        g_modelMatrix1.scale(0.13, 0.08, 0.1);
+        draw(gl, shapeArr[0], u_modelMatrix, g_modelMatrix1); 
+    g_modelMatrix1 = popMatrix();
+
+    pushMatrix(g_modelMatrix1);
+        g_modelMatrix1.setTranslate(-0.4, 0.4, -0.5);
+        g_modelMatrix1.scale(1,1,-1);	
+        g_modelMatrix1.scale(0.12, 0.06, 0.1);
+        draw(gl, shapeArr[0], u_modelMatrix, g_modelMatrix1); 
+    g_modelMatrix1 = popMatrix();
+
+    pushMatrix(g_modelMatrix1);
+        g_modelMatrix1.setTranslate(-0.75, 0.32, 1);
+        g_modelMatrix1.scale(1,1,-1);	
+        g_modelMatrix1.scale(0.1, 0.06, 0.3);
+        g_modelMatrix1.scale(0.5,0.5,0.5);
+        draw(gl, shapeArr[0], u_modelMatrix, g_modelMatrix1); 
+    g_modelMatrix1 = popMatrix();
+
+}
+
+function drawShapeDraggable(gl, shape, u_modelMatrix, g_modelMatrix1) { 
+    //perp-axis rotation for object:
+    var dist = Math.sqrt(g_xMdragTot*g_xMdragTot + g_yMdragTot*g_yMdragTot);
+    g_modelMatrix1.rotate(dist*120.0, -g_yMdragTot+0.0001, g_xMdragTot+0.0001, 0.0);
+    draw(gl, shape,  u_modelMatrix, g_modelMatrix1);
+}
+
+function draw(gl, shape, u_modelMatrix, g_modelMatrix1){ //general draw function
+    initAttributeVariable(gl, gl.program.a_Position, shape.vertexBuffer);
+    initAttributeVariable(gl, gl.program.a_Normal, shape.normalBuffer);
+    if (gl.program.a_Color != undefined){ // If a_Color is defined to attribute
+        initAttributeVariable(gl, gl.program.a_Color, shape.colorBuffer);
+    }
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, shape.indexBuffer);
+
+    gl.uniformMatrix4fv(u_modelMatrix, false, g_modelMatrix1.elements);
+    gl.drawElements(gl.TRIANGLES, shape.numIndices, gl.UNSIGNED_BYTE, 0);
+}
+
+function initAttributeVariable(gl, a_attribute, buffer) { // Assign the buffer objects and enable the assignment
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.vertexAttribPointer(a_attribute, buffer.num, buffer.type, false, 0, 0);
+    gl.enableVertexAttribArray(a_attribute);
+}
+
+// * ==================Animation====================================
+var g_last1 = Date.now();
+function animate1(g_angle01) {
+  var now = Date.now();  // Calculate the elapsed time
+  var elapsed = now - g_last1;
+  g_last1 = now; 
+
+  var newAngle = g_angle01 + ((g_angle01Rate) * elapsed) / 1000.0;
+  
+  if(newAngle > 80.0) newAngle = -1*newAngle;
+  if(newAngle < 0) newAngle = 0;
+  return newAngle;
+}
+
+var isForward = true;
 var g_last = Date.now();
-function animate(angle) {
-  var now = Date.now(); // Calculate the elapsed time
+function animate2() {
+  var now = Date.now();  // Calculate the elapsed time
   var elapsed = now - g_last;
-  g_last = now;
-  var newAngle = angle + (ANGLE_STEP * elapsed) / 1000.0;
-  return newAngle %= 360;
+  g_last = now; 
+  var newAngle = 0;
+  if(isForward){
+    newAngle = g_angle02 + (g_angle02Rate * elapsed) / 1000.0;
+  }
+  if(newAngle > g_angle02Max){ isForward = false;}
+  if(!isForward){
+    newAngle = g_angle02 - (g_angle02Rate * elapsed) / 1000.0;
+  } 
+  if(newAngle < g_angle02Min){ isForward = true;}
+  return newAngle;
 }
+
+// * ==================handle matrices=============================
+var g_matrixStack = []; // Array for storing a matrix
+function pushMatrix(m) { // Store the specified matrix to the array
+  var m2 = new Matrix4(m);
+  g_matrixStack.push(m2);
+}
+
+function popMatrix() { // Retrieve the matrix from the array
+  return g_matrixStack.pop();
+}
+
+
+
+
+// * ==================HTML Button Callbacks=========================
+function angleSubmit() {
+// Called when user presses 'Submit' button on our webpage
+//		HOW? Look in HTML file (e.g. ControlMulti.html) to find
+//	the HTML 'input' element with id='usrAngle'.  Within that
+//	element you'll find a 'button' element that calls this fcn.
+
+// Read HTML edit-box contents:
+  var UsrTxt = document.getElementById('usrAngle').value;	
+// Display what we read from the edit-box: use it to fill up
+// the HTML 'div' element with id='editBoxOut':
+  document.getElementById('EditBoxOut').innerHTML ='You Typed: '+UsrTxt;
+  console.log('angleSubmit: UsrTxt:', UsrTxt); // print in console, and
+  g_angle01 = parseFloat(UsrTxt);     // convert string to float number 
+};
+    
+function clearDrag() {
+// Called when user presses 'Clear' button in our webpage
+	g_xMdragTot = 0.0;
+	g_yMdragTot = 0.0;
+}
+
 function spinUp() {
-  ANGLE_STEP += 25; 
+// Called when user presses the 'Spin >>' button on our webpage.
+// ?HOW? Look in the HTML file (e.g. ControlMulti.html) to find
+// the HTML 'button' element with onclick='spinUp()'.
+  g_angle01Rate += 25; 
 }
+
 function spinDown() {
- ANGLE_STEP -= 25; 
+// Called when user presses the 'Spin <<' button
+ g_angle01Rate -= 25; 
 }
+
 function runStop() {
-  if(ANGLE_STEP*ANGLE_STEP > 1) {
-    myTmp = ANGLE_STEP;
-    ANGLE_STEP = 0;
+// Called when user presses the 'Run/Stop' button
+  if(g_angle01Rate*g_angle01Rate > 1) {  // if nonzero rate,
+    myTmp = g_angle01Rate;  // store the current rate,
+    g_angle01Rate = 0;      // and set to zero.
   }
-  else {
-  	ANGLE_STEP = myTmp;
+  else {    // but if rate is zero,
+  	g_angle01Rate = myTmp;  // use the stored rate.
   }
 }
+
+// * ===================Mouse and Keyboard event-handling Callbacks===========
+function myMouseDown(ev) {
+    //==============================================================================
+    // Called when user PRESSES down any mouse button;
+    // 									(Which button?    console.log('ev.button='+ev.button);   )
+    // 		ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
+    //		pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!)  
+    
+    // Create right-handed 'pixel' coords with origin at WebGL canvas LOWER left;
+      var rect = ev.target.getBoundingClientRect();	// get canvas corners in pixels
+      var xp = ev.clientX - rect.left;									// x==0 at canvas left edge
+      var yp = g_canvas.height - (ev.clientY - rect.top);	// y==0 at canvas bottom edge
+    //  console.log('myMouseDown(pixel coords): xp,yp=\t',xp,',\t',yp);
+      
+        // Convert to Canonical View Volume (CVV) coordinates too:
+      var x = (xp - g_canvas.width/2)  / 		// move origin to center of canvas and
+                               (g_canvas.width/2);			// normalize canvas to -1 <= x < +1,
+        var y = (yp - g_canvas.height/2) /		//										 -1 <= y < +1.
+                                 (g_canvas.height/2);
+    //	console.log('myMouseDown(CVV coords  ):  x, y=\t',x,',\t',y);
+        
+        g_isDrag = true;											// set our mouse-dragging flag
+        g_xMclik = x;													// record where mouse-dragging began
+        g_yMclik = y;
+        // report on webpage
+        document.getElementById('MouseAtResult').innerHTML = 
+          'Mouse At: '+x.toFixed(5)+', '+y.toFixed(5);
+};
+    
+function myMouseMove(ev) {
+    //==============================================================================
+    // Called when user MOVES the mouse with a button already pressed down.
+    // 									(Which button?   console.log('ev.button='+ev.button);    )
+    // 		ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
+    //		pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!)  
+    
+        if(g_isDrag==false) return;				// IGNORE all mouse-moves except 'dragging'
+    
+        // Create right-handed 'pixel' coords with origin at WebGL canvas LOWER left;
+      var rect = ev.target.getBoundingClientRect();	// get canvas corners in pixels
+      var xp = ev.clientX - rect.left;									// x==0 at canvas left edge
+        var yp = g_canvas.height - (ev.clientY - rect.top);	// y==0 at canvas bottom edge
+    //  console.log('myMouseMove(pixel coords): xp,yp=\t',xp,',\t',yp);
+      
+        // Convert to Canonical View Volume (CVV) coordinates too:
+      var x = (xp - g_canvas.width/2)  / 		// move origin to center of canvas and
+                               (g_canvas.width/2);			// normalize canvas to -1 <= x < +1,
+        var y = (yp - g_canvas.height/2) /		//										 -1 <= y < +1.
+                                 (g_canvas.height/2);
+    //	console.log('myMouseMove(CVV coords  ):  x, y=\t',x,',\t',y);
+    
+        // find how far we dragged the mouse:
+        g_xMdragTot += (x - g_xMclik);					// Accumulate change-in-mouse-position,&
+        g_yMdragTot += (y - g_yMclik);
+        // Report new mouse position & how far we moved on webpage:
+        document.getElementById('MouseAtResult').innerHTML = 
+          'Mouse At: '+x.toFixed(5)+', '+y.toFixed(5);
+        document.getElementById('MouseDragResult').innerHTML = 
+          'Mouse Drag: '+(x - g_xMclik).toFixed(5)+', '+(y - g_yMclik).toFixed(5);
+    
+        g_xMclik = x;													// Make next drag-measurement from here.
+        g_yMclik = y;
+};
+    
+function myMouseUp(ev) {
+    //==============================================================================
+    // Called when user RELEASES mouse button pressed previously.
+    // 									(Which button?   console.log('ev.button='+ev.button);    )
+    // 		ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
+    //		pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!)  
+    
+    // Create right-handed 'pixel' coords with origin at WebGL canvas LOWER left;
+      var rect = ev.target.getBoundingClientRect();	// get canvas corners in pixels
+      var xp = ev.clientX - rect.left;									// x==0 at canvas left edge
+        var yp = g_canvas.height - (ev.clientY - rect.top);	// y==0 at canvas bottom edge
+    //  console.log('myMouseUp  (pixel coords): xp,yp=\t',xp,',\t',yp);
+      
+        // Convert to Canonical View Volume (CVV) coordinates too:
+      var x = (xp - g_canvas.width/2)  / 		// move origin to center of canvas and
+                               (g_canvas.width/2);			// normalize canvas to -1 <= x < +1,
+        var y = (yp - g_canvas.height/2) /		//										 -1 <= y < +1.
+                                 (g_canvas.height/2);
+        console.log('myMouseUp  (CVV coords  ):  x, y=\t',x,',\t',y);
+        
+        g_isDrag = false;											// CLEAR our mouse-dragging flag, and
+        // accumulate any final bit of mouse-dragging we did:
+        g_xMdragTot += (x - g_xMclik);
+        g_yMdragTot += (y - g_yMclik);
+        // Report new mouse position:
+        document.getElementById('MouseAtResult').innerHTML = 
+          'Mouse At: '+x.toFixed(5)+', '+y.toFixed(5);
+        console.log('myMouseUp: g_xMdragTot,g_yMdragTot =',g_xMdragTot,',\t',g_yMdragTot);
+};
+    
+function myMouseClick(ev) {
+    //=============================================================================
+    // Called when user completes a mouse-button single-click event 
+    // (e.g. mouse-button pressed down, then released)
+    // 									   
+    //    WHICH button? try:  console.log('ev.button='+ev.button); 
+    // 		ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
+    //		pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!) 
+    //    See myMouseUp(), myMouseDown() for conversions to  CVV coordinates.
+    
+      // STUB
+        console.log("myMouseClick() on button: ", ev.button); 
+}	
+    
+function myMouseDblClick(ev) {
+    //=============================================================================
+    // Called when user completes a mouse-button double-click event 
+    // 									   
+    //    WHICH button? try:  console.log('ev.button='+ev.button); 
+    // 		ev.clientX, ev.clientY == mouse pointer location, but measured in webpage 
+    //		pixels: left-handed coords; UPPER left origin; Y increases DOWNWARDS (!) 
+    //    See myMouseUp(), myMouseDown() for conversions to  CVV coordinates.
+    
+      // STUB
+        console.log("myMouse-DOUBLE-Click() on button: ", ev.button); 
+}	
