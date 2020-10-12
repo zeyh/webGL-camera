@@ -38,12 +38,18 @@ var g_modelMatLoc;                  // that uniform's location in the GPU
 
 // * angle config
 var ANGLE_STEP = 3.0;           // The increments of rotation angle (degrees)
-var g_angle01 = 0;              // The rotation angle of part 1
+var g_angle01 = 1;              // The rotation angle of part 1
 var g_angle02 = 25.0;          // The rotation angle of part 2
-var g_angle01Rate = 45.0;       // rotation speed, in degrees/second                 
+var g_angle03 = 0.0;          // The rotation angle of part 2
+var g_angle01Rate = 2;       // rotation speed, in degrees/second                 
 var g_angle02Rate = 40.0; 
+var g_angle03Rate = 20.0; 
+var g_angle01Min = 0;  
+var g_angle01Max = 70; 
 var g_angle02Min = 0;  
 var g_angle02Max = 70; 
+var g_angle03Min = 0;  
+var g_angle03Max = 70; 
 var g_rainNum = 3;
 // * Animation config
 var g_isRun = true;                 // run/stop for animation; used in tick().
@@ -55,6 +61,45 @@ var g_yMclik=0.0;
 var g_xMdragTot=0.0;	// total (accumulated) mouse-drag amounts (in CVV coords).
 var g_yMdragTot=0.0;  
 var seed;
+var drawingMode = "triangles";
+function changeNum(inputStr){
+    if(g_rainNum == 0 && inputStr == '-'){
+        alert("It's not rainy anymore! Please try the + button")
+        return;
+    }
+    if(g_rainNum < 0 ){
+        g_rainNum = 0;
+    }
+    if(inputStr == '+'){
+        g_rainNum ++;
+    }
+    if(inputStr == '-'){
+        g_rainNum --;
+    }
+}
+function changeSpeed(inputStr){
+    if(g_angle02Rate == 0 && inputStr == '-'){
+        alert("It's not windy anymore! Please try the + button")
+        return;
+    }
+    if(g_angle02Rate < 0 ){
+        g_angle02Rate = 0;
+    }
+    if(inputStr == '+'){
+        g_angle02Rate += 10;
+    }
+    if(inputStr == '-'){
+        g_angle02Rate -= 10;
+    }
+}
+function changeMode(){
+    console.log(drawingMode)
+    if(drawingMode == "triangles"){
+        drawingMode = "lines";
+    }else{
+        drawingMode = "triangles";
+    }
+}
 function main() {
     console.log("now I'm in js file...");
     g_canvas = document.getElementById('webgl');
@@ -64,7 +109,6 @@ function main() {
         console.log('Failed to get the rendering context for WebGL');
         return;
     }
-
     // Initialize shaders
     if (!initShaders(gl, VSHADER_SOURCE, FSHADER_SOURCE)) {
         console.log('Failed to intialize shaders.');
@@ -108,7 +152,7 @@ function main() {
     window.addEventListener("mousedown", myMouseDown); 
     window.addEventListener("mousemove", myMouseMove); 
     window.addEventListener("mouseup", myMouseUp);	
-
+    document.onkeydown = function(ev){ keydown(ev, gl, shape1, viewProjMatrix, u_modelMatrix, u_normalMatrix); };
 
     // Set the clear color and enable the depth test
     gl.clearColor(0.1, 0.1, 0.2, 1.0);
@@ -123,7 +167,7 @@ function main() {
     var tick = function() {
         seed = Math.random();
         g_angle02 = animate2();  // Update the rotation angle
-        g_angle01 = animate1(g_angle01);  // Update the rotation angle
+        g_angle01 = animate1();  // Update the rotation angle
         drawAll(gl, [shape1, shape2, shape3], viewProjMatrix, u_modelMatrix); 
         document.getElementById('CurAngleDisplay').innerHTML= 
             'g_angle02= '+g_angle02.toFixed(5);    //reports current angle value:
@@ -136,13 +180,9 @@ function main() {
 
 }
 
-// TODO: 3. animation
-// TODO: 4. several sequential, moving joints
-// TODO: 5. Keyboard Interaction
-// TODO: 7. user-adjustable color for one 3D part
-// TODO: 8. user-adjustable flex-angle
-// TODO: 9. webpage controls & features (dat.gui)
-// TODO: 10. User Instructions
+
+// TODO: 7. user-adjustable color for one 3D part (Weekend)
+// TODO: 8. Scene Graph & report pdf (Weekend)
 
 // * ==================Load VBOs====================================
 function initVertexBuffersForShape1(gl) { //semi-sphere
@@ -548,51 +588,80 @@ function drawAll(gl, shapeArr, viewProjMatrix, u_modelMatrix) { //draw all the s
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     clrColr = new Float32Array(4);
     clrColr = gl.getParameter(gl.COLOR_CLEAR_VALUE);
+
+    //raindrops - changed with angle02
     pushMatrix(g_modelMatrix1);
         for(var i=0; i<g_rainNum; i++){
             let seed3 = Math.random();
-            g_modelMatrix1.setTranslate(-0.7+g_angle02/100 + i/g_rainNum, -1*seed3+0.1, 0); 	
+            g_modelMatrix1.setTranslate(-0.7+g_angle02/100 + i*1/g_rainNum, -1*seed3+0.1, 0); 	
             g_modelMatrix1.scale(0.02, 0.05, 0.02);
             draw(gl, shapeArr[2], u_modelMatrix, g_modelMatrix1); 
         }
     g_modelMatrix1 = popMatrix();
-
+    
+    //thunder
     pushMatrix(g_modelMatrix1);
-        g_modelMatrix1.setTranslate(0, -0.1, 0); 
+        g_modelMatrix1.setTranslate(0, -0.2, 0); 
         g_modelMatrix1.scale(1,1,-1);	
         g_modelMatrix1.scale(0.12, 0.12, 0.12);
         drawShapeDraggable(gl, shapeArr[1], u_modelMatrix, g_modelMatrix1); 
+    g_modelMatrix1 = popMatrix();
+    
+    drawClouds(gl, shapeArr[0], u_modelMatrix, g_modelMatrix1)
+}
+
+function drawClouds(gl, shape, u_modelMatrix, g_modelMatrix1){
+    //clouds
+    var scaleFactor = 20;
+    pushMatrix(g_modelMatrix1);
+        g_modelMatrix1.setTranslate(0.5, 0.46, 0);
+        g_modelMatrix1.scale(1,1,-1);	
+        g_modelMatrix1.scale(0.13, 0.08, 0.1);
+        let delay = 2.6;
+        if(g_angle01>delay){
+            g_modelMatrix1.scale(1+g_angle01/scaleFactor,1+g_angle01/scaleFactor, 1+g_angle01/scaleFactor);
+        }
+        else{
+            g_modelMatrix1.scale(1+delay/scaleFactor,1+delay/scaleFactor, 1+delay/scaleFactor);
+        }
+        drawMovable(gl, shape, u_modelMatrix, g_modelMatrix1); 
     g_modelMatrix1 = popMatrix();
 
     pushMatrix(g_modelMatrix1);
         g_modelMatrix1.setTranslate(0, 0.6, 0); 
         g_modelMatrix1.scale(1,1,-1);	
         g_modelMatrix1.scale(0.12, 0.12, 0.12);
-        draw(gl, shapeArr[0], u_modelMatrix, g_modelMatrix1); 
-    g_modelMatrix1 = popMatrix();
-
-    pushMatrix(g_modelMatrix1);
-        g_modelMatrix1.setTranslate(0.5, 0.46, 0);
-        g_modelMatrix1.scale(1,1,-1);	
-        g_modelMatrix1.scale(0.13, 0.08, 0.1);
-        draw(gl, shapeArr[0], u_modelMatrix, g_modelMatrix1); 
+        delay = 2;
+        if(g_angle01>delay){
+            g_modelMatrix1.scale(1+g_angle01/scaleFactor,1+g_angle01/scaleFactor, 1+g_angle01/scaleFactor);
+        }
+        else{
+            g_modelMatrix1.scale(1+delay/scaleFactor,1+delay/scaleFactor, 1+delay/scaleFactor);
+        }
+        drawMovable(gl, shape, u_modelMatrix, g_modelMatrix1); 
     g_modelMatrix1 = popMatrix();
 
     pushMatrix(g_modelMatrix1);
         g_modelMatrix1.setTranslate(-0.4, 0.4, -0.5);
         g_modelMatrix1.scale(1,1,-1);	
         g_modelMatrix1.scale(0.12, 0.06, 0.1);
-        draw(gl, shapeArr[0], u_modelMatrix, g_modelMatrix1); 
+        delay = 1.5;
+        if(g_angle01>delay){
+            g_modelMatrix1.scale(1+g_angle01/scaleFactor,1+g_angle01/scaleFactor, 1+g_angle01/scaleFactor);
+        }
+        else{
+            g_modelMatrix1.scale(1+delay/scaleFactor,1+delay/scaleFactor, 1+delay/scaleFactor);
+        }
+        drawMovable(gl, shape, u_modelMatrix, g_modelMatrix1);       
     g_modelMatrix1 = popMatrix();
 
     pushMatrix(g_modelMatrix1);
         g_modelMatrix1.setTranslate(-0.75, 0.32, 1);
         g_modelMatrix1.scale(1,1,-1);	
         g_modelMatrix1.scale(0.1, 0.06, 0.3);
-        g_modelMatrix1.scale(0.5,0.5,0.5);
-        draw(gl, shapeArr[0], u_modelMatrix, g_modelMatrix1); 
+        g_modelMatrix1.scale(0.5+g_angle01/10,0.5+g_angle01/10,0.5+g_angle01/10);
+        drawMovable(gl, shape, u_modelMatrix, g_modelMatrix1); 
     g_modelMatrix1 = popMatrix();
-
 }
 
 function drawShapeDraggable(gl, shape, u_modelMatrix, g_modelMatrix1) { 
@@ -611,7 +680,17 @@ function draw(gl, shape, u_modelMatrix, g_modelMatrix1){ //general draw function
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, shape.indexBuffer);
 
     gl.uniformMatrix4fv(u_modelMatrix, false, g_modelMatrix1.elements);
-    gl.drawElements(gl.TRIANGLES, shape.numIndices, gl.UNSIGNED_BYTE, 0);
+    if(drawingMode == "lines"){
+        gl.drawElements(gl.LINE_LOOP, shape.numIndices, gl.UNSIGNED_BYTE, 0);
+    }
+    else{
+        gl.drawElements(gl.TRIANGLES, shape.numIndices, gl.UNSIGNED_BYTE, 0);
+    }
+}
+
+function drawMovable(gl, shape, u_modelMatrix, g_modelMatrix1){ //draw key movements
+    g_modelMatrix1.rotate(g_angle03, 0.0, 1.0, 0.0); 
+    draw(gl, shape, u_modelMatrix, g_modelMatrix1)
 }
 
 function initAttributeVariable(gl, a_attribute, buffer) { // Assign the buffer objects and enable the assignment
@@ -621,17 +700,57 @@ function initAttributeVariable(gl, a_attribute, buffer) { // Assign the buffer o
 }
 
 // * ==================Animation====================================
-var g_last1 = Date.now();
-function animate1(g_angle01) {
-  var now = Date.now();  // Calculate the elapsed time
-  var elapsed = now - g_last1;
-  g_last1 = now; 
+function keydown(ev, gl, shape, viewProjMatrix, u_MvpMatrix, u_NormalMatrix) {
+    // from JointModel.js (c) 2012 matsuda
+    switch (ev.keyCode) {
+      case 38: // Up arrow key -> the positive rotation of joint1 around the z-axis
+        if (g_angle03 < 135.0) g_angle03 += ANGLE_STEP;
+        break;
+      case 40: // Down arrow key -> the negative rotation of joint1 around the z-axis
+        if (g_angle03 > -135.0) g_angle03 -= ANGLE_STEP;
+        break;
+      case 39: // Right arrow key -> the positive rotation of arm1 around the y-axis
+        g_angle03 = (g_angle03 + ANGLE_STEP) % 360;
+        break;
+      case 37: // Left arrow key -> the negative rotation of arm1 around the y-axis
+      g_angle03 = (g_angle03 - ANGLE_STEP) % 360;
+        break;
+      default: return; // Skip drawing at no effective action
+    }
+  }
 
-  var newAngle = g_angle01 + ((g_angle01Rate) * elapsed) / 1000.0;
-  
-  if(newAngle > 80.0) newAngle = -1*newAngle;
-  if(newAngle < 0) newAngle = 0;
-  return newAngle;
+var g_last2 = Date.now();
+function animate3() {
+    var now = Date.now();  // Calculate the elapsed time
+    var elapsed = now - g_last2;
+    g_last2 = now; 
+    var newAngle = 0;
+    if(isForward){
+      newAngle = g_angle03 + (g_angle03Rate * elapsed) / 1000.0;
+    }
+    if(newAngle > g_angle03Max){ isForward = false;}
+    if(!isForward){
+      newAngle = g_angle03 - (g_angle03Rate * elapsed) / 1000.0;
+    } 
+    if(newAngle < g_angle03Min){ isForward = true;}
+    return newAngle;
+}
+
+var g_last1 = Date.now();
+function animate1() {
+    var now = Date.now();  // Calculate the elapsed time
+    var elapsed = now - g_last1;
+    g_last1 = now; 
+    var newAngle = 0;
+    if(isForward){
+      newAngle = g_angle01 + (g_angle01Rate * elapsed) / 1000.0;
+    }
+    if(newAngle > g_angle01Max){ isForward = false;}
+    if(!isForward){
+      newAngle = g_angle01 - (g_angle01Rate * elapsed) / 1000.0;
+    } 
+    if(newAngle < g_angle01Min){ isForward = true;}
+    return newAngle;
 }
 
 var isForward = true;
