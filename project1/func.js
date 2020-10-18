@@ -41,11 +41,11 @@ var ANGLE_STEP = 3.0;           // The increments of rotation angle (degrees)
 var g_angle01 = 1;              // The rotation angle of part 1
 var g_angle02 = 25.0;          // The rotation angle of part 2
 var g_angle03 = 0.0;          // The rotation angle of part 2
-var g_angle01Rate = 2;       // rotation speed, in degrees/second                 
+var g_angle01Rate = 1.8;       // rotation speed, in degrees/second                 
 var g_angle02Rate = 40.0; 
-var g_angle03Rate = 20.0; 
+var g_angle03Rate = 10.0; 
 var g_angle01Min = 0;  
-var g_angle01Max = 70; 
+var g_angle01Max = 2.5; 
 var g_angle02Min = 0;  
 var g_angle02Max = 70; 
 var g_angle03Min = 0;  
@@ -130,7 +130,8 @@ function main() {
     var shape1 = initVertexBuffersForShape1(gl);
     var shape2 = initVertexBuffersForShape2(gl);
     var shape3 = initVertexBuffersForShape3(gl);
-    if (! shape1 || !shape2 || !shape3) {
+    var shape4 = initVertexBuffersForShape4(gl);
+    if (! shape1 || !shape2 || !shape3 || !shape4) {
         console.log('Failed to set the vertex information');
         return;
     }
@@ -155,7 +156,9 @@ function main() {
     document.onkeydown = function(ev){ keydown(ev, gl, shape1, viewProjMatrix, u_modelMatrix, u_normalMatrix); };
 
     // Set the clear color and enable the depth test
-    gl.clearColor(0.1, 0.1, 0.2, 1.0);
+    // gl.clearColor(0.1, 0.1, 0.2, 1.0);
+    gl.clearColor(0.0, 0.0, 0.0, 0.0);
+    // initBkgnd();
     gl.enable (gl.BLEND);// Enable alpha blending
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // Set blending function
     gl.depthFunc(gl.LESS); //Enable 3D depth-test when drawing: don't over-draw at any pixel 
@@ -168,7 +171,7 @@ function main() {
         seed = Math.random();
         g_angle02 = animate2();  // Update the rotation angle
         g_angle01 = animate1();  // Update the rotation angle
-        drawAll(gl, [shape1, shape2, shape3], viewProjMatrix, u_modelMatrix); 
+        drawAll(gl, [shape1, shape2, shape3,shape4], viewProjMatrix, u_modelMatrix, u_normalMatrix); 
         document.getElementById('CurAngleDisplay').innerHTML= 
             'g_angle02= '+g_angle02.toFixed(5);    //reports current angle value:
         document.getElementById('Mouse').innerHTML=
@@ -183,6 +186,262 @@ function main() {
 
 // TODO: 7. user-adjustable color for one 3D part (Weekend)
 // TODO: 8. Scene Graph & report pdf (Weekend)
+
+// * ==================Drawing====================================
+function drawAll(gl, shapeArr, viewProjMatrix, u_modelMatrix, u_normalMatrix) { //draw all the shape
+    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    clrColr = new Float32Array(4);
+    clrColr = gl.getParameter(gl.COLOR_CLEAR_VALUE);
+    
+    //raindrops - changed with angle02
+    pushMatrix(g_modelMatrix1);
+        for(var i=0; i<g_rainNum; i++){
+            let rainseed =  generateRainSeed();
+            g_modelMatrix1.setTranslate(-0.7+g_angle02/100 + i*1/g_rainNum, rainseed, 0); 	
+            g_modelMatrix1.scale(0.02, 0.05, 0.02);
+            draw(gl, shapeArr[2], u_modelMatrix, g_modelMatrix1); 
+        }
+    g_modelMatrix1 = popMatrix();
+    drawThunder(gl, [shapeArr[1], shapeArr[3]], u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix)
+    drawClouds(gl, shapeArr[0], u_modelMatrix, g_modelMatrix1)
+    // drawThunder(gl, [shapeArr[1], shapeArr[3]], u_modelMatrix, g_modelMatrix1)
+}
+
+var g_modelMatrix1 = new Matrix4(), g_mvpMatrix = new Matrix4();
+var g_chainAngle1 = 0, g_chainAngle2 = 90;
+function drawThunder(gl, [thunder, cube], u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix){
+    // pushMatrix(g_modelMatrix1);
+    // g_modelMatrix1 = popMatrix();
+    var dist = Math.sqrt(g_xMdragTot*g_xMdragTot + g_yMdragTot*g_yMdragTot);
+    //chain
+    // for(let i=0; i<8; i++){
+    //     pushMatrix(g_modelMatrix1);
+    //         g_modelMatrix1.setScale(0.02,0.06,0.02);
+    //         g_modelMatrix1.translate(0,-1.2*i,0);
+    //         g_modelMatrix1.rotate(dist*10, 0.0, 0.0, 1.0);
+    //         drawBox(gl, cube, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix); 
+    //     g_modelMatrix1 = popMatrix();
+    // }
+    g_modelMatrix1.setTranslate(0,0,0);
+    g_modelMatrix1.rotate(g_angle03*0.8,  0.0, 1.0, 0.0);
+    
+    //base
+    pushMatrix(g_modelMatrix1);
+        g_modelMatrix1.scale(0.5,1,0.5);
+        g_modelMatrix1.translate(0,0,0);
+        drawBox(gl, cube, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix); 
+    g_modelMatrix1 = popMatrix();
+    
+    //string
+    g_modelMatrix1.rotate(g_chainAngle1,  0.0, 0.0, 1.0);
+    pushMatrix(g_modelMatrix1);
+        g_modelMatrix1.scale(0.1,8,0.1);
+        g_modelMatrix1.translate(0,-1,0);
+        drawBox(gl, cube, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix); 
+    g_modelMatrix1 = popMatrix();
+
+    //bob
+    pushMatrix(g_modelMatrix1);
+        g_modelMatrix1.scale(1.8, 2, 1.8);
+        g_modelMatrix1.translate(0, -5, 0.55);
+        drawShapeAdjust(gl, thunder, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix); 
+    g_modelMatrix1 = popMatrix();
+   
+}
+
+function drawShapeAdjust(gl, shape, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix){
+    drawBox(gl, shape, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix);
+}
+function drawBox(gl, shape, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix){
+    g_mvpMatrix.set(viewProjMatrix);
+    g_mvpMatrix.multiply(g_modelMatrix1);
+    gl.uniformMatrix4fv(u_modelMatrix, false, g_mvpMatrix.elements);
+    g_normalMatrix.setInverseOf(g_modelMatrix1);
+    g_normalMatrix.transpose();
+    gl.uniformMatrix4fv(u_normalMatrix, false, g_normalMatrix.elements);
+    draw(gl, shape,  u_normalMatrix, g_normalMatrix);
+}
+
+function drawClouds(gl, shape, u_modelMatrix, g_modelMatrix1){
+    //clouds
+    var scaleFactor = 20;
+    pushMatrix(g_modelMatrix1);
+        g_modelMatrix1.setTranslate(0.5, 0.56, 0);
+        g_modelMatrix1.scale(1,1,-1);	
+        g_modelMatrix1.scale(0.12, 0.08, 0.1);
+        let delay = 2.6;
+        if(g_angle01>delay){
+            g_modelMatrix1.scale(1+g_angle01/scaleFactor,1+g_angle01/scaleFactor, 1+g_angle01/scaleFactor);
+        }
+        else{
+            g_modelMatrix1.scale(1+delay/scaleFactor,1+delay/scaleFactor, 1+delay/scaleFactor);
+        }
+        drawMovable(gl, shape, u_modelMatrix, g_modelMatrix1); 
+    g_modelMatrix1 = popMatrix();
+
+    pushMatrix(g_modelMatrix1);
+        g_modelMatrix1.setTranslate(0, 0.7, 0); 
+        g_modelMatrix1.scale(1,1,-1);	
+        g_modelMatrix1.scale(0.11, 0.12, 0.12);
+        delay = 2;
+        if(g_angle01>delay){
+            g_modelMatrix1.scale(1+g_angle01/scaleFactor,1+g_angle01/scaleFactor, 1+g_angle01/scaleFactor);
+        }
+        else{
+            g_modelMatrix1.scale(1+delay/scaleFactor,1+delay/scaleFactor, 1+delay/scaleFactor);
+        }
+        drawMovable(gl, shape, u_modelMatrix, g_modelMatrix1); 
+    g_modelMatrix1 = popMatrix();
+
+    pushMatrix(g_modelMatrix1);
+        g_modelMatrix1.setTranslate(-0.4, 0.5, -0.5);
+        g_modelMatrix1.scale(1,1,-1);	
+        g_modelMatrix1.scale(0.11, 0.06, 0.1);
+        delay = 1.5;
+        if(g_angle01>delay){
+            g_modelMatrix1.scale(1+g_angle01/scaleFactor,1+g_angle01/scaleFactor, 1+g_angle01/scaleFactor);
+        }
+        else{
+            g_modelMatrix1.scale(1+delay/scaleFactor,1+delay/scaleFactor, 1+delay/scaleFactor);
+        }
+        drawMovable(gl, shape, u_modelMatrix, g_modelMatrix1);       
+    g_modelMatrix1 = popMatrix();
+
+    pushMatrix(g_modelMatrix1);
+        g_modelMatrix1.setTranslate(-0.75, 0.42, 1);
+        g_modelMatrix1.scale(1,1,-1);	
+        g_modelMatrix1.scale(0.1, 0.06, 0.3);
+        g_modelMatrix1.scale(0.5+g_angle01/10,0.5+g_angle01/10,0.5+g_angle01/10);
+        drawMovable(gl, shape, u_modelMatrix, g_modelMatrix1); 
+    g_modelMatrix1 = popMatrix();
+}
+
+function drawShapeDraggable(gl, shape, u_modelMatrix, g_modelMatrix1) { 
+    //perp-axis rotation for object:
+    var dist = Math.sqrt(g_xMdragTot*g_xMdragTot + g_yMdragTot*g_yMdragTot);
+    // g_modelMatrix1.rotate(dist*120.0, -g_yMdragTot+0.0001, g_xMdragTot+0.0001, 0.0);
+    if(g_yMdragTot > 0.7){ g_yMdragTot = 0.7;}
+    g_modelMatrix1.translate(g_xMdragTot*8,g_yMdragTot*8,0.0);
+    g_modelMatrix1.rotate(g_angle03, 0.0, 1.0, 0.0); 
+    draw(gl, shape,  u_modelMatrix, g_modelMatrix1);
+}
+
+function drawShapeRotateDraggable(gl, shape, u_modelMatrix, g_modelMatrix1) { 
+    //perp-axis rotation for object:
+    var dist = Math.sqrt(g_xMdragTot*g_xMdragTot + g_yMdragTot*g_yMdragTot);
+    g_modelMatrix1.rotate(dist*120.0, -g_yMdragTot+0.0001, g_xMdragTot+0.0001, 0.0);
+    draw(gl, shape,  u_modelMatrix, g_modelMatrix1);
+}
+function draw(gl, shape, u_modelMatrix, g_modelMatrix1){ //general draw function
+    initAttributeVariable(gl, gl.program.a_Position, shape.vertexBuffer);
+    initAttributeVariable(gl, gl.program.a_Normal, shape.normalBuffer);
+    if (gl.program.a_Color != undefined){ // If a_Color is defined to attribute
+        initAttributeVariable(gl, gl.program.a_Color, shape.colorBuffer);
+    }
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, shape.indexBuffer);
+
+    gl.uniformMatrix4fv(u_modelMatrix, false, g_modelMatrix1.elements);
+    if(drawingMode == "lines"){
+        gl.drawElements(gl.LINE_STRIP, shape.numIndices, gl.UNSIGNED_BYTE, 0);
+    }
+    else{
+        gl.drawElements(gl.TRIANGLES, shape.numIndices, gl.UNSIGNED_BYTE, 0);
+    }
+}
+
+function drawMovable(gl, shape, u_modelMatrix, g_modelMatrix1){ //draw key movements
+    g_modelMatrix1.rotate(g_angle03, 0.0, 1.0, 0.0); 
+    draw(gl, shape, u_modelMatrix, g_modelMatrix1)
+}
+
+function initAttributeVariable(gl, a_attribute, buffer) { // Assign the buffer objects and enable the assignment
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.vertexAttribPointer(a_attribute, buffer.num, buffer.type, false, 0, 0);
+    gl.enableVertexAttribArray(a_attribute);
+}
+
+// * ==================Animation====================================
+function generateRainSeed(){
+    //generate a random vertial y value
+    let seed3 = Math.random();
+    let vertical = -1*seed3+0.3;
+    if(vertical < -0.7){ //not falling out of certain range
+        vertical = 0;
+    }
+    return vertical;
+}
+
+function keydown(ev, gl, shape, viewProjMatrix, u_MvpMatrix, u_NormalMatrix) {
+    // from JointModel.js (c) 2012 matsuda
+    switch (ev.keyCode) {
+      case 38: // Up arrow key -> the positive rotation of joint1 around the z-axis
+        if (g_chainAngle1 < 360.0) g_chainAngle1 += ANGLE_STEP;
+        break;
+      case 40: // Down arrow key -> the negative rotation of joint1 around the z-axis
+        if (g_chainAngle1 > -360.0) g_chainAngle1 -= ANGLE_STEP;
+        break;
+      case 39: // Right arrow key -> the positive rotation of arm1 around the y-axis
+        g_angle03 = (g_angle03 + ANGLE_STEP) % 360;
+        break;
+      case 37: // Left arrow key -> the negative rotation of arm1 around the y-axis
+      g_angle03 = (g_angle03 - ANGLE_STEP) % 360;
+        break;
+      default: return; // Skip drawing at no effective action
+    }
+}
+
+var g_last2 = Date.now();
+function animate3() {
+    var now = Date.now();  // Calculate the elapsed time
+    var elapsed = now - g_last2;
+    g_last2 = now; 
+    var newAngle = 0;
+    if(isForward){
+      newAngle = g_angle03 + (g_angle03Rate * elapsed) / 1000.0;
+    }
+    if(newAngle > g_angle03Max){ isForward = false;}
+    if(!isForward){
+      newAngle = g_angle03 - (g_angle03Rate * elapsed) / 1000.0;
+    } 
+    if(newAngle < g_angle03Min){ isForward = true;}
+    return newAngle;
+}
+
+var g_last1 = Date.now();
+function animate1() {
+    var now = Date.now();  // Calculate the elapsed time
+    var elapsed = now - g_last1;
+    g_last1 = now; 
+    var newAngle = 0;
+    if(newAngle < 0 || newAngle > 3){ return 1;}
+    if(isForward){
+      newAngle = g_angle01 + (g_angle01Rate * elapsed) / 1000.0;
+    }
+    if(newAngle > g_angle01Max){ isForward = false;}
+    if(!isForward){
+      newAngle = g_angle01 - (g_angle01Rate * elapsed) / 1000.0;
+    } 
+    if(newAngle < g_angle01Min){ isForward = true;}
+    return newAngle;
+}
+
+var isForward = true;
+var g_last = Date.now();
+function animate2() {
+  var now = Date.now();  // Calculate the elapsed time
+  var elapsed = now - g_last;
+  g_last = now; 
+  var newAngle = 0;
+  if(isForward){
+    newAngle = g_angle02 + (g_angle02Rate * elapsed) / 1000.0;
+  }
+  if(newAngle > g_angle02Max){ isForward = false;}
+  if(!isForward){
+    newAngle = g_angle02 - (g_angle02Rate * elapsed) / 1000.0;
+  } 
+  if(newAngle < g_angle02Min){ isForward = true;}
+  return newAngle;
+}
 
 // * ==================Load VBOs====================================
 function initVertexBuffersForShape1(gl) { //semi-sphere
@@ -319,45 +578,45 @@ function initVertexBuffersForShape1(gl) { //semi-sphere
     ]);
 
     var colors = new Float32Array([   
-        81/255, 173/255, 207/255, 1,
-        250/255, 220/255, 170/255, 1,
-        15/255, 48/255, 87/255, 1,
-        15/255, 48/255, 87/255, 1, 
-        250/255, 208/255, 191/255, 1, //front
+        81/255, 173/255, 207/255, 0.8,
+        250/255, 220/255, 170/255, 0.8,
+        15/255, 48/255, 87/255, 0.8,
+        15/255, 48/255, 87/255, 0.8, 
+        250/255, 208/255, 191/255, 0.8, //front
         
-        81/255, 173/255, 207/255, 1,
-        15/255, 48/255, 87/255, 1,
-        15/255, 48/255, 87/255, 1,
-        81/255, 173/255, 207/255, 1, 
-        232/255, 255/255, 255/255, 1, //right
+        81/255, 173/255, 207/255,0.8,
+        15/255, 48/255, 87/255, 0.8,
+        15/255, 48/255, 87/255, 0.8,
+        81/255, 173/255, 207/255, 0.8, 
+        232/255, 255/255, 255/255, 0.8, //right
         
-        81/255, 173/255, 207/255, 1,
-        81/255, 173/255, 207/255, 1,
-        232/255, 255/255, 255/255,1,
-        250/255, 220/255, 170/255, 1, 
-        250/255, 220/255, 170/255, 1, //up
+        81/255, 173/255, 207/255, 0.8,
+        81/255, 173/255, 207/255, 0.8,
+        232/255, 255/255, 255/255,0.8,
+        250/255, 220/255, 170/255, 0.8, 
+        250/255, 220/255, 170/255, 0.8, //up
         
-        250/255, 220/255, 170/255, 1,
-        232/255, 255/255, 255/255, 1,
-        15/255, 48/255, 87/255, 1,
-        15/255, 48/255, 87/255, 1, 
-        250/255, 220/255, 170/255, 1, //left
+        250/255, 220/255, 170/255, 0.8,
+        232/255, 255/255, 255/255, 0.8,
+        15/255, 48/255, 87/255, 0.8,
+        15/255, 48/255, 87/255, 0.8, 
+        250/255, 220/255, 170/255, 0.8, //left
 
-        15/255, 48/255, 87/255, 1,
-        15/255, 48/255, 87/255, 1,
-        15/255, 48/255, 87/255, 1,
-        15/255, 48/255, 87/255, 1, 
-        15/255, 48/255, 87/255, 1,
-        15/255, 48/255, 87/255, 1,
-        42/255, 60/255, 87/255, 1,
-        28/255, 48/255, 74/255, 1, 
-        0/255, 88/255, 122/255, 1, //down
+        15/255, 48/255, 87/255, 0.8,
+        15/255, 48/255, 87/255, 0.8,
+        15/255, 48/255, 87/255, 0.8,
+        15/255, 48/255, 87/255, 0.8, 
+        15/255, 48/255, 87/255, 0.8,
+        15/255, 48/255, 87/255, 0.8,
+        42/255, 60/255, 87/255, 0.8,
+        28/255, 48/255, 74/255, 0.8, 
+        0/255, 88/255, 122/255, 0.8, //down
 
-        15/255, 48/255, 87/255, 1,
-        15/255, 48/255, 87/255, 1,
-        232/255, 255/255, 255/255,1,
-        81/255, 173/255, 207/255, 1, 
-        232/255, 255/255, 255/255, 1, //back
+        15/255, 48/255, 87/255, 0.8,
+        15/255, 48/255, 87/255, 0.8,
+        232/255, 255/255, 255/255,0.8,
+        81/255, 173/255, 207/255, 0.8, 
+        232/255, 255/255, 255/255, 0.8, //back
          
     ]);
 
@@ -446,7 +705,7 @@ function initVertexBuffersForShape2(gl) { //⚡️
 
     var colors = new Float32Array([   
         204/255, 102/255, 0/255, 1,
-        204/255, 102/255, 51/255, 1,
+        255/255, 102/255, 0/255, 1,
 
         204/255, 102/255, 51/255, 1,
         255/255, 255/255, 0/255, 1, 
@@ -458,9 +717,7 @@ function initVertexBuffersForShape2(gl) { //⚡️
         255/255, 153/255, 51/255, 1, //front
 
         255/255, 153/255, 51/255, 1, //front
-        255/255, 255/255, 153/255, 1, //front
- 
-         
+        255/255, 255/255, 153/255, 1, //front     
     ]);
 
     var o = new Object(); // Utilize Object object to return multiple buffer
@@ -551,7 +808,93 @@ function initVertexBuffersForShape3(gl) { // full sphere from Shadow_highp.js (c
   
     return o;
 }
-  
+
+function initVertexBuffersForShape4(gl) { //cube
+    var vertices = new Float32Array([
+        0.5, 1.0, 0.5, -0.5, 1.0, 0.5, -0.5, 0.0, 0.5,  0.5, 0.0, 0.5, // v0-v1-v2-v3 front
+        0.5, 1.0, 0.5,  0.5, 0.0, 0.5,  0.5, 0.0,-0.5,  0.5, 1.0,-0.5, // v0-v3-v4-v5 right
+        0.5, 1.0, 0.5,  0.5, 1.0,-0.5, -0.5, 1.0,-0.5, -0.5, 1.0, 0.5, // v0-v5-v6-v1 up
+       -0.5, 1.0, 0.5, -0.5, 1.0,-0.5, -0.5, 0.0,-0.5, -0.5, 0.0, 0.5, // v1-v6-v7-v2 left
+       -0.5, 0.0,-0.5,  0.5, 0.0,-0.5,  0.5, 0.0, 0.5, -0.5, 0.0, 0.5, // v7-v4-v3-v2 down
+        0.5, 0.0,-0.5, -0.5, 0.0,-0.5, -0.5, 1.0,-0.5,  0.5, 1.0,-0.5  // v4-v7-v6-v5 back
+      ]);
+    
+      // Normal
+      var normals = new Float32Array([
+        0.0, 0.0, 1.0,  0.0, 0.0, 1.0,  0.0, 0.0, 1.0,  0.0, 0.0, 1.0, // v0-v1-v2-v3 front
+        1.0, 0.0, 0.0,  1.0, 0.0, 0.0,  1.0, 0.0, 0.0,  1.0, 0.0, 0.0, // v0-v3-v4-v5 right
+        0.0, 1.0, 0.0,  0.0, 1.0, 0.0,  0.0, 1.0, 0.0,  0.0, 1.0, 0.0, // v0-v5-v6-v1 up
+       -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, -1.0, 0.0, 0.0, // v1-v6-v7-v2 left
+        0.0,-1.0, 0.0,  0.0,-1.0, 0.0,  0.0,-1.0, 0.0,  0.0,-1.0, 0.0, // v7-v4-v3-v2 down
+        0.0, 0.0,-1.0,  0.0, 0.0,-1.0,  0.0, 0.0,-1.0,  0.0, 0.0,-1.0  // v4-v7-v6-v5 back
+      ]);
+      var colors = new Float32Array([   
+        255/255, 255/255, 204/255,  1, 
+        255/255, 255/255, 204/255, 1, 
+        255/255, 255/255, 204/255, 1, 
+        255/255, 255/255, 204/255, 1, 
+
+        255/255, 255/255, 204/255,  1, 
+        255/255, 255/255, 204/255, 1, 
+        255/255, 255/255, 204/255, 1, 
+        255/255, 255/255, 204/255, 1, 
+
+        255/255, 255/255, 204/255,  1,
+        255/255, 255/255, 204/255, 1, 
+        255/255, 255/255, 204/255, 1, 
+        255/255, 255/255, 204/255, 1, 
+
+        255/255, 255/255, 204/255,  1,
+        255/255, 255/255, 204/255, 1, 
+        255/255, 255/255, 204/255, 1, 
+        255/255, 255/255, 204/255, 1, 
+
+        255/255, 255/255, 204/255,  1,
+        255/255, 255/255, 204/255, 1, 
+        255/255, 255/255, 204/255, 1, 
+        255/255, 255/255, 204/255, 1, 
+
+        255/255, 255/255, 204/255,  1, 
+        255/255, 255/255, 204/255, 1, 
+        255/255, 255/255, 204/255, 1, 
+        255/255, 255/255, 204/255, 1,    
+    ]);
+      // Indices of the vertices
+      var indices = new Uint8Array([
+         0, 1, 2,   0, 2, 3,    // front
+         4, 5, 6,   4, 6, 7,    // right
+         8, 9,10,   8,10,11,    // up
+        12,13,14,  12,14,15,    // left
+        16,17,18,  16,18,19,    // down
+        20,21,22,  20,22,23     // back
+    ]);
+    // var colors = [];
+    // for(let i=0; i<vertices.length/3; i++){
+    //     colors.push(0/255);
+    //     colors.push(0/255);
+    //     colors.push(0/255);
+    //     colors.push(1);
+    // }
+
+    var o = new Object(); // Utilize Object object to return multiple buffer
+    // Write the vertex property to Buffer Objects
+    o.vertexBuffer = initArrayBuffer(gl, vertices, 3, gl.FLOAT, 'a_Position');
+    o.normalBuffer = initArrayBuffer(gl, normals, 3, gl.FLOAT, 'a_Normal');
+    o.colorBuffer = initArrayBuffer(gl, colors, 4, gl.FLOAT, 'a_Color');
+    o.indexBuffer = initIndexBuffer(gl, indices, gl.UNSIGNED_BYTE);
+    o.numIndices = indices.length;
+    if (!o.vertexBuffer ||  !o.colorBuffer || !o.normalBuffer || !o.indexBuffer){
+        console.log("fail to Write the vertex property to Buffer Objects")
+        return -1;
+    }
+
+    // Unbind the buffer object
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+
+    return o;
+}
+
 function initIndexBuffer(gl,data, type){
     // bind the index array
     var buffer = gl.createBuffer();
@@ -581,196 +924,6 @@ function initArrayBuffer(gl, data, num, type, attribute) {
 
     return buffer;
 }
-
-
-// * ==================Drawing====================================
-function drawAll(gl, shapeArr, viewProjMatrix, u_modelMatrix) { //draw all the shape
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    clrColr = new Float32Array(4);
-    clrColr = gl.getParameter(gl.COLOR_CLEAR_VALUE);
-
-    //raindrops - changed with angle02
-    pushMatrix(g_modelMatrix1);
-        for(var i=0; i<g_rainNum; i++){
-            let seed3 = Math.random();
-            g_modelMatrix1.setTranslate(-0.7+g_angle02/100 + i*1/g_rainNum, -1*seed3+0.1, 0); 	
-            g_modelMatrix1.scale(0.02, 0.05, 0.02);
-            draw(gl, shapeArr[2], u_modelMatrix, g_modelMatrix1); 
-        }
-    g_modelMatrix1 = popMatrix();
-    
-    //thunder
-    pushMatrix(g_modelMatrix1);
-        g_modelMatrix1.setTranslate(0, -0.2, 0); 
-        g_modelMatrix1.scale(1,1,-1);	
-        g_modelMatrix1.scale(0.12, 0.12, 0.12);
-        drawShapeDraggable(gl, shapeArr[1], u_modelMatrix, g_modelMatrix1); 
-    g_modelMatrix1 = popMatrix();
-    
-    drawClouds(gl, shapeArr[0], u_modelMatrix, g_modelMatrix1)
-}
-
-function drawClouds(gl, shape, u_modelMatrix, g_modelMatrix1){
-    //clouds
-    var scaleFactor = 20;
-    pushMatrix(g_modelMatrix1);
-        g_modelMatrix1.setTranslate(0.5, 0.46, 0);
-        g_modelMatrix1.scale(1,1,-1);	
-        g_modelMatrix1.scale(0.13, 0.08, 0.1);
-        let delay = 2.6;
-        if(g_angle01>delay){
-            g_modelMatrix1.scale(1+g_angle01/scaleFactor,1+g_angle01/scaleFactor, 1+g_angle01/scaleFactor);
-        }
-        else{
-            g_modelMatrix1.scale(1+delay/scaleFactor,1+delay/scaleFactor, 1+delay/scaleFactor);
-        }
-        drawMovable(gl, shape, u_modelMatrix, g_modelMatrix1); 
-    g_modelMatrix1 = popMatrix();
-
-    pushMatrix(g_modelMatrix1);
-        g_modelMatrix1.setTranslate(0, 0.6, 0); 
-        g_modelMatrix1.scale(1,1,-1);	
-        g_modelMatrix1.scale(0.12, 0.12, 0.12);
-        delay = 2;
-        if(g_angle01>delay){
-            g_modelMatrix1.scale(1+g_angle01/scaleFactor,1+g_angle01/scaleFactor, 1+g_angle01/scaleFactor);
-        }
-        else{
-            g_modelMatrix1.scale(1+delay/scaleFactor,1+delay/scaleFactor, 1+delay/scaleFactor);
-        }
-        drawMovable(gl, shape, u_modelMatrix, g_modelMatrix1); 
-    g_modelMatrix1 = popMatrix();
-
-    pushMatrix(g_modelMatrix1);
-        g_modelMatrix1.setTranslate(-0.4, 0.4, -0.5);
-        g_modelMatrix1.scale(1,1,-1);	
-        g_modelMatrix1.scale(0.12, 0.06, 0.1);
-        delay = 1.5;
-        if(g_angle01>delay){
-            g_modelMatrix1.scale(1+g_angle01/scaleFactor,1+g_angle01/scaleFactor, 1+g_angle01/scaleFactor);
-        }
-        else{
-            g_modelMatrix1.scale(1+delay/scaleFactor,1+delay/scaleFactor, 1+delay/scaleFactor);
-        }
-        drawMovable(gl, shape, u_modelMatrix, g_modelMatrix1);       
-    g_modelMatrix1 = popMatrix();
-
-    pushMatrix(g_modelMatrix1);
-        g_modelMatrix1.setTranslate(-0.75, 0.32, 1);
-        g_modelMatrix1.scale(1,1,-1);	
-        g_modelMatrix1.scale(0.1, 0.06, 0.3);
-        g_modelMatrix1.scale(0.5+g_angle01/10,0.5+g_angle01/10,0.5+g_angle01/10);
-        drawMovable(gl, shape, u_modelMatrix, g_modelMatrix1); 
-    g_modelMatrix1 = popMatrix();
-}
-
-function drawShapeDraggable(gl, shape, u_modelMatrix, g_modelMatrix1) { 
-    //perp-axis rotation for object:
-    var dist = Math.sqrt(g_xMdragTot*g_xMdragTot + g_yMdragTot*g_yMdragTot);
-    g_modelMatrix1.rotate(dist*120.0, -g_yMdragTot+0.0001, g_xMdragTot+0.0001, 0.0);
-    draw(gl, shape,  u_modelMatrix, g_modelMatrix1);
-}
-
-function draw(gl, shape, u_modelMatrix, g_modelMatrix1){ //general draw function
-    initAttributeVariable(gl, gl.program.a_Position, shape.vertexBuffer);
-    initAttributeVariable(gl, gl.program.a_Normal, shape.normalBuffer);
-    if (gl.program.a_Color != undefined){ // If a_Color is defined to attribute
-        initAttributeVariable(gl, gl.program.a_Color, shape.colorBuffer);
-    }
-    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, shape.indexBuffer);
-
-    gl.uniformMatrix4fv(u_modelMatrix, false, g_modelMatrix1.elements);
-    if(drawingMode == "lines"){
-        gl.drawElements(gl.LINE_LOOP, shape.numIndices, gl.UNSIGNED_BYTE, 0);
-    }
-    else{
-        gl.drawElements(gl.TRIANGLES, shape.numIndices, gl.UNSIGNED_BYTE, 0);
-    }
-}
-
-function drawMovable(gl, shape, u_modelMatrix, g_modelMatrix1){ //draw key movements
-    g_modelMatrix1.rotate(g_angle03, 0.0, 1.0, 0.0); 
-    draw(gl, shape, u_modelMatrix, g_modelMatrix1)
-}
-
-function initAttributeVariable(gl, a_attribute, buffer) { // Assign the buffer objects and enable the assignment
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.vertexAttribPointer(a_attribute, buffer.num, buffer.type, false, 0, 0);
-    gl.enableVertexAttribArray(a_attribute);
-}
-
-// * ==================Animation====================================
-function keydown(ev, gl, shape, viewProjMatrix, u_MvpMatrix, u_NormalMatrix) {
-    // from JointModel.js (c) 2012 matsuda
-    switch (ev.keyCode) {
-      case 38: // Up arrow key -> the positive rotation of joint1 around the z-axis
-        if (g_angle03 < 135.0) g_angle03 += ANGLE_STEP;
-        break;
-      case 40: // Down arrow key -> the negative rotation of joint1 around the z-axis
-        if (g_angle03 > -135.0) g_angle03 -= ANGLE_STEP;
-        break;
-      case 39: // Right arrow key -> the positive rotation of arm1 around the y-axis
-        g_angle03 = (g_angle03 + ANGLE_STEP) % 360;
-        break;
-      case 37: // Left arrow key -> the negative rotation of arm1 around the y-axis
-      g_angle03 = (g_angle03 - ANGLE_STEP) % 360;
-        break;
-      default: return; // Skip drawing at no effective action
-    }
-  }
-
-var g_last2 = Date.now();
-function animate3() {
-    var now = Date.now();  // Calculate the elapsed time
-    var elapsed = now - g_last2;
-    g_last2 = now; 
-    var newAngle = 0;
-    if(isForward){
-      newAngle = g_angle03 + (g_angle03Rate * elapsed) / 1000.0;
-    }
-    if(newAngle > g_angle03Max){ isForward = false;}
-    if(!isForward){
-      newAngle = g_angle03 - (g_angle03Rate * elapsed) / 1000.0;
-    } 
-    if(newAngle < g_angle03Min){ isForward = true;}
-    return newAngle;
-}
-
-var g_last1 = Date.now();
-function animate1() {
-    var now = Date.now();  // Calculate the elapsed time
-    var elapsed = now - g_last1;
-    g_last1 = now; 
-    var newAngle = 0;
-    if(isForward){
-      newAngle = g_angle01 + (g_angle01Rate * elapsed) / 1000.0;
-    }
-    if(newAngle > g_angle01Max){ isForward = false;}
-    if(!isForward){
-      newAngle = g_angle01 - (g_angle01Rate * elapsed) / 1000.0;
-    } 
-    if(newAngle < g_angle01Min){ isForward = true;}
-    return newAngle;
-}
-
-var isForward = true;
-var g_last = Date.now();
-function animate2() {
-  var now = Date.now();  // Calculate the elapsed time
-  var elapsed = now - g_last;
-  g_last = now; 
-  var newAngle = 0;
-  if(isForward){
-    newAngle = g_angle02 + (g_angle02Rate * elapsed) / 1000.0;
-  }
-  if(newAngle > g_angle02Max){ isForward = false;}
-  if(!isForward){
-    newAngle = g_angle02 - (g_angle02Rate * elapsed) / 1000.0;
-  } 
-  if(newAngle < g_angle02Min){ isForward = true;}
-  return newAngle;
-}
-
 // * ==================handle matrices=============================
 var g_matrixStack = []; // Array for storing a matrix
 function pushMatrix(m) { // Store the specified matrix to the array
@@ -781,8 +934,6 @@ function pushMatrix(m) { // Store the specified matrix to the array
 function popMatrix() { // Retrieve the matrix from the array
   return g_matrixStack.pop();
 }
-
-
 
 
 // * ==================HTML Button Callbacks=========================

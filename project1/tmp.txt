@@ -1,0 +1,7 @@
+This is a very rough and basic rain simulator. By clicking this button on the upper right, you can change the drawing mode to be lines or triangles. 
+
+As the instruction shows here, by pressing the right or left buttons on keyboard, the clouds can be rotated. The cloud assembly are expanding and shrinking in sequence, as the first cloud expands for a little bit then, the second cloud expands. 
+
+Also, the mouse can drag the thunder in the middle. 
+
+For the rains, you can make the rain much heavier by clicking the add button here, and you can decrease the number of raindrops to make it stop raining. Similarly, you can increase or decrease the wind speed to let the horizontal movement of the rain to be faster or slower. 
