@@ -94,6 +94,7 @@
         <div>
             <button id="squareButton" onclick="changeMode()"> Changing Drawing Mode </button> 
         </div>
+        
         <div class= "instructions">
             <div class = "instruction_info">
                 <span>☁️ - press &larr; or &rarr; on keyboard to rotate the clouds </span>
@@ -115,6 +116,11 @@
                 <span style="margin-top: -30px;"> 💨 - wind speed </span> 
                  <button onclick="changeSpeed('+')"> + </button> <button onclick="changeSpeed('-')"> - </button>
             </div>
+            <div class = "instruction_info">
+                <span style="margin-top: -30px;"> 🌈 - Cloud Color </span> 
+                 <button onclick="changeColor('+')"> + </button> <button onclick="changeColor('-')"> - </button>
+            </div>
+
             
         </div>
         <canvas id="webgl" style="background: url('pic/bg.jpg')" width="700" height="700">

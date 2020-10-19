@@ -65,6 +65,33 @@ var g_xMdragTot=0.0;	// total (accumulated) mouse-drag amounts (in CVV coords).
 var g_yMdragTot=0.0;  
 var seed;
 var drawingMode = "triangles";
+var g_isMouseUp = false;
+var g_isMouseDown = false;
+var g_damping1 = 20;
+var g_colorFactor = 0.5;
+
+function changeColor(inputStr){
+    if(g_colorFactor <= 0 && inputStr == '-'){
+        alert("Cannot make any changes for now.")
+        return;
+    }
+    if(g_colorFactor >= 1 && inputStr == '+'){
+        alert("Cannot make any changes for now.")
+        return;
+    }
+    if(g_colorFactor < 0 ){
+        g_colorFactor = 0;
+    }
+    if(g_colorFactor > 1 ){
+        g_colorFactor = 1;
+    }
+    if(inputStr == '+'){
+        g_colorFactor += 0.1;
+    }
+    if(inputStr == '-'){
+        g_colorFactor -= 0.1;
+    }
+}
 function changeNum(inputStr){
     if(g_rainNum == 0 && inputStr == '-'){
         alert("It's not rainy anymore! Please try the + button")
@@ -101,6 +128,21 @@ function changeMode(){
         drawingMode = "lines";
     }else{
         drawingMode = "triangles";
+    }
+}
+function changeDamping(inputStr){
+    if(g_damping1 <= 0 && inputStr == '-'){
+        alert("There's no more fraction force! Please click the add button!")
+        return;
+    }
+    if(g_damping1 < 0 ){
+        g_damping1 = 0;
+    }
+    if(inputStr == '+'){
+        g_damping1 +=5;
+    }
+    if(inputStr == '-'){
+        g_damping1 -=5;
     }
 }
 function main() {
@@ -214,16 +256,7 @@ var g_chainAngle1 = 0, g_chainAngle2 = 90;
 function drawThunder(gl, [thunder, cube], u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix){
     // pushMatrix(g_modelMatrix1);
     // g_modelMatrix1 = popMatrix();
-    var dist = Math.sqrt(g_xMdragTot*g_xMdragTot + g_yMdragTot*g_yMdragTot);
-    //chain
-    // for(let i=0; i<8; i++){
-    //     pushMatrix(g_modelMatrix1);
-    //         g_modelMatrix1.setScale(0.02,0.06,0.02);
-    //         g_modelMatrix1.translate(0,-1.2*i,0);
-    //         g_modelMatrix1.rotate(dist*10, 0.0, 0.0, 1.0);
-    //         drawBox(gl, cube, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix); 
-    //     g_modelMatrix1 = popMatrix();
-    // }
+
     g_modelMatrix1.setTranslate(0,0,0);
     g_modelMatrix1.rotate(g_angle03*0.8,  0.0, 1.0, 0.0);
     
@@ -234,17 +267,15 @@ function drawThunder(gl, [thunder, cube], u_modelMatrix, g_modelMatrix1, viewPro
         drawBox(gl, cube, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix); 
     g_modelMatrix1 = popMatrix();
     
-
     let dragAngle = 80*g_xMdragTot;
-    if(dragAngle > 90){ dragAngle = 90;}
-    if(dragAngle < -90) { dragAngle = -90;}
+    if(dragAngle > 40){ dragAngle = 40;}
+    if(dragAngle < -40) { dragAngle = -40;}
     let oscilateAngle = SHO(dragAngle);
     let oscTime = Math.floor(g_time/100);
     if(oscTime > g_endSHOtime/g_SHOgap-1){ 
         oscTime = g_endSHOtime/g_SHOgap-1;
         g_modelMatrix1.rotate(0,  0.0, 0.0, 1.0);
     }
-    //oscilateAngle[oscTime]*80
     //string
     else{
         g_modelMatrix1.rotate(oscilateAngle[oscTime]*80,  0.0, 0.0, 1.0);
@@ -259,14 +290,23 @@ function drawThunder(gl, [thunder, cube], u_modelMatrix, g_modelMatrix1, viewPro
     pushMatrix(g_modelMatrix1);
         g_modelMatrix1.scale(1.8, 2, 1.8);
         g_modelMatrix1.translate(0, -5, 0.55);
-        drawShapeAdjust(gl, thunder, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix); 
+        drawShapeAdjust(gl, thunder, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix, oscilateAngle[oscTime]*80); 
     g_modelMatrix1 = popMatrix();
 
    
 }
 
-function drawShapeAdjust(gl, shape, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix){
-    g_modelMatrix1.rotate(-80*g_xMdragTot,0,0,1);
+function drawShapeAdjust(gl, shape, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix, angle){
+    g_modelMatrix1.rotate(20-1*angle,0,0,1);
+    let oscilateAngle = SHO2(20); //another SHO motion for the bob over y axis //assuming alreays start at 20 degrees for now
+    let oscTime = Math.floor(g_time/100);
+    if(oscTime > g_endSHOtime/g_SHOgap-1){ 
+        oscTime = g_endSHOtime/g_SHOgap-1;
+        g_modelMatrix1.rotate(0,  0.0, 0.0, 1.0);
+    }else{
+        g_modelMatrix1.rotate(oscilateAngle[oscTime]*80,0,1,0);
+    }
+    
     drawBox(gl, shape, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix);
 }
 function drawBox(gl, shape, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix){
@@ -379,15 +419,15 @@ function initAttributeVariable(gl, a_attribute, buffer) { // Assign the buffer o
 
 // * ==================Animation====================================
 function SHO(dragAngle){ //underdamped with t is time
-    let initAngle = dragAngle; //init angle to start with
+    let initAngle = 0; //init angle to start with
     let t_stop = g_endSHOtime; //ending time
     let h = g_SHOgap; //incremental step
 
     //constant
     let m = 100 //mass
     let g = 10; //gravity constant
-    let L = 8; //length of string
-    let b = 20; //underdamping factor  < 2mw_0
+    let L = 5; //length of string
+    let b = g_damping1; //underdamping factor  < 2mw_0
 
     //an array from 0 to 100(end)
     let t = [t_stop/h]; 
@@ -397,7 +437,39 @@ function SHO(dragAngle){ //underdamped with t is time
     }
     //an array of 0 from 1 to length of t
     let theta = [t.length]; 
-    let angelDerivative = 0.2*3.14;
+    let angelDerivative = (dragAngle*3.14/180)*3.14; //change degree to rad
+    theta[0] = 0;
+    theta[1] = theta[0] + angelDerivative*h;
+
+    for(let i=0; i<t.length-2;i++){
+        theta[i+2] =  2*theta[i+1] - theta[i] - 
+                      h*h*g*Math.sin(theta[i+1])/L 
+                      + (b*h/m)*(theta[i]-theta[i+1]); //for t in the middle
+    }
+    return theta;
+
+}
+
+function SHO2(dragAngle){ //underdamped with t is time
+    let initAngle = 0; //init angle to start with
+    let t_stop = g_endSHOtime; //ending time
+    let h = g_SHOgap; //incremental step
+
+    //constant
+    let m = 100 //mass
+    let g = 10; //gravity constant
+    let L = 2; //length of string
+    let b = 5; //underdamping factor  < 2mw_0
+
+    //an array from 0 to 100(end)
+    let t = [t_stop/h]; 
+    t[0] = 0;
+    for(let i=1; i<t_stop/h; i++){
+        t[i] = t[i-1]+h;
+    }
+    //an array of 0 from 1 to length of t
+    let theta = [t.length]; 
+    let angelDerivative = (dragAngle*3.14/180)*3.14;
     theta[0] = initAngle;
     theta[1] = theta[0] + angelDerivative*h;
 
@@ -438,6 +510,7 @@ function keydown(ev, gl, shape, viewProjMatrix, u_MvpMatrix, u_NormalMatrix) {
       default: return; // Skip drawing at no effective action
     }
 }
+
 
 var g_last3 = Date.now();
 function showCurTime() {
@@ -838,15 +911,16 @@ function initVertexBuffersForShape3(gl) { // full sphere from Shadow_highp.js (c
       }
     }
 
-    // colors
+    //colors
     for (j = 0; j <= SPHERE_DIV; j++) {
         for (i = 0; i <= SPHERE_DIV; i++) {
           colors.push( (j-1)/SPHERE_DIV  );  // X
-          colors.push( (j-1)/SPHERE_DIV + 0.05);       // Y
-          colors.push( (j-1)/SPHERE_DIV + 0.2);  // Z
+          colors.push( ((j-1)/SPHERE_DIV + 0.05)*1);       // Y
+          colors.push( ((j-1)/SPHERE_DIV + 0.2)*1);  // Z
           colors.push(1);
         }
       }
+
   
     var o = new Object(); // Utilize Object object to return multiple buffer objects together
   
@@ -1057,7 +1131,7 @@ function myMouseDown(ev) {
                                (g_canvas.width/2);			// normalize canvas to -1 <= x < +1,
         var y = (yp - g_canvas.height/2) /		//										 -1 <= y < +1.
                                  (g_canvas.height/2);
-    //	console.log('myMouseDown(CVV coords  ):  x, y=\t',x,',\t',y);
+    	console.log('myMouseDown(CVV coords  ):  x, y=\t',x,',\t',y);
         
         g_isDrag = true;											// set our mouse-dragging flag
         g_xMclik = x;													// record where mouse-dragging began
@@ -1065,6 +1139,7 @@ function myMouseDown(ev) {
         // report on webpage
         document.getElementById('MouseAtResult').innerHTML = 
           'Mouse At: '+x.toFixed(5)+', '+y.toFixed(5);
+          
 };
     
 function myMouseMove(ev) {
