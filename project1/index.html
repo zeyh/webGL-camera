@@ -9,11 +9,11 @@
                     background: white;
                 }
                 .instructions {
-                    color: #fff;
+                    color: black;
                     font-family: 'Annie Use Your Telescope', cursive;
                     font-size: 20px;
                     position: absolute;
-                    top:20px;
+                    top:630px;
                     left:20px;
                     line-height: 100%;
                     padding-bottom: 30px;
@@ -84,23 +84,26 @@
                     font-size: 20px;
                     border-radius: 3%;
                     margin-bottom: 12px;
-                    position: absolute;
-                    top:20px;
+                    position: relative;
+                    top:5px;
                     left:500px;
                 }
             </style>
 	</head>
 	<body onload="main();">
+        <canvas id="webgl" style="background: url('pic/bg.jpg')" width="700" height="700">
+			Please use a browser that supports "canvas"
+		</canvas>
         <div>
             <button id="squareButton" onclick="changeMode()"> Changing Drawing Mode </button> 
         </div>
         
         <div class= "instructions">
             <div class = "instruction_info">
-                <span>☁️ - press &larr; or &rarr; on keyboard to rotate the clouds </span>
+                <span>⚡️ - draggable</span>
             </div>
             <div class = "instruction_info">
-                <span>⚡️ - draggable</span>
+                <span>☁️ - press &larr; &rarr; on keyboard to rotate </span>
             </div>
             <div class = "instruction_info">
                 <span style="margin-top: -30px;"> ☔️ - raindrops number </span> 
@@ -123,9 +126,7 @@
 
             
         </div>
-        <canvas id="webgl" style="background: url('pic/bg.jpg')" width="700" height="700">
-			Please use a browser that supports "canvas"
-		</canvas>
+
 
         <div class="details">
             <hr />

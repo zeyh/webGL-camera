@@ -41,7 +41,7 @@ var ANGLE_STEP = 3.0;           // The increments of rotation angle (degrees)
 var g_angle01 = 1;              // The rotation angle of part 1
 var g_angle02 = 25.0;          // The rotation angle of part 2
 var g_angle03 = 0.0;          // The rotation angle of part 2
-var g_angle01Rate = 1.8;       // rotation speed, in degrees/second                 
+var g_angle01Rate = 1.2;       // rotation speed, in degrees/second                 
 var g_angle02Rate = 40.0; 
 var g_angle03Rate = 10.0; 
 var g_angle01Min = 0;  
@@ -258,27 +258,38 @@ function drawThunder(gl, [thunder, cube], u_modelMatrix, g_modelMatrix1, viewPro
     // g_modelMatrix1 = popMatrix();
 
     g_modelMatrix1.setTranslate(0,0,0);
-    g_modelMatrix1.rotate(g_angle03*0.8,  0.0, 1.0, 0.0);
+    g_modelMatrix1.rotate(g_angle03*0.8,  0.0, 1.0, 0.0); //adjust the position according to keyboard input <-->
     
     //base
     pushMatrix(g_modelMatrix1);
-        g_modelMatrix1.scale(0.5,1,0.5);
+        g_modelMatrix1.scale(0.3,1,0.3);
         g_modelMatrix1.translate(0,0,0);
         drawBox(gl, cube, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix); 
     g_modelMatrix1 = popMatrix();
-    
-    let dragAngle = 80*g_xMdragTot;
+
+    //config dragging action
+    let dragAngle = 40*g_xMdragTot;
     if(dragAngle > 40){ dragAngle = 40;}
     if(dragAngle < -40) { dragAngle = -40;}
-    let oscilateAngle = SHO(dragAngle);
+
+    g_modelMatrix1.rotate(dragAngle,  0.0, 0.0, 1.0);
+
     let oscTime = Math.floor(g_time/100);
+    let oscilateAngle = SHO(dragAngle);
+    if(g_isDrag &&  g_yMclik > -0.7 && g_yMclik < 0.2 ){ //not confused with button clicking action
+        oscilateAngle = SHO(dragAngle);
+    }
+
+    //string
     if(oscTime > g_endSHOtime/g_SHOgap-1){ 
         oscTime = g_endSHOtime/g_SHOgap-1;
+        g_modelMatrix1.rotate(-1*dragAngle,  0.0, 0.0, 1.0);
         g_modelMatrix1.rotate(0,  0.0, 0.0, 1.0);
+        g_last3 = Date.now();
     }
-    //string
     else{
-        g_modelMatrix1.rotate(oscilateAngle[oscTime]*80,  0.0, 0.0, 1.0);
+        g_modelMatrix1.rotate(oscilateAngle[oscTime+1]*80,  0.0, 0.0, 1.0);
+        g_modelMatrix1.rotate(-1*dragAngle,  0.0, 0.0, 1.0);
     }
     pushMatrix(g_modelMatrix1);
         g_modelMatrix1.scale(0.1,10,0.1);
@@ -288,8 +299,9 @@ function drawThunder(gl, [thunder, cube], u_modelMatrix, g_modelMatrix1, viewPro
     
     //bob
     pushMatrix(g_modelMatrix1);
-        g_modelMatrix1.scale(1.8, 2, 1.8);
-        g_modelMatrix1.translate(0, -5, 0.55);
+        // g_modelMatrix1.scale(1.8, 2, 1.8);
+        g_modelMatrix1.scale(2.7, 3, 2.7);
+        g_modelMatrix1.translate(0, -3.2, 0.55);
         drawShapeAdjust(gl, thunder, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix, oscilateAngle[oscTime]*80); 
     g_modelMatrix1 = popMatrix();
 
@@ -514,9 +526,12 @@ function keydown(ev, gl, shape, viewProjMatrix, u_MvpMatrix, u_NormalMatrix) {
 
 var g_last3 = Date.now();
 function showCurTime() {
+    if(g_isDrag && g_yMclik > -0.7 && g_yMclik < 0.2 ){
+        g_last3 = Date.now();
+    }
     var now = Date.now();  // Calculate the elapsed time
     var elapsed = now - g_last3;
-    g_last2 = now; 
+    // console.log(Math.floor(elapsed/1000))
     return elapsed;
 }
 
@@ -1131,7 +1146,7 @@ function myMouseDown(ev) {
                                (g_canvas.width/2);			// normalize canvas to -1 <= x < +1,
         var y = (yp - g_canvas.height/2) /		//										 -1 <= y < +1.
                                  (g_canvas.height/2);
-    	console.log('myMouseDown(CVV coords  ):  x, y=\t',x,',\t',y);
+    	// console.log('myMouseDown(CVV coords  ):  x, y=\t',x,',\t',y);
         
         g_isDrag = true;											// set our mouse-dragging flag
         g_xMclik = x;													// record where mouse-dragging began
@@ -1195,16 +1210,17 @@ function myMouseUp(ev) {
                                (g_canvas.width/2);			// normalize canvas to -1 <= x < +1,
         var y = (yp - g_canvas.height/2) /		//										 -1 <= y < +1.
                                  (g_canvas.height/2);
-        console.log('myMouseUp  (CVV coords  ):  x, y=\t',x,',\t',y);
+        // console.log('myMouseUp  (CVV coords  ):  x, y=\t',x,',\t',y);
         
         g_isDrag = false;											// CLEAR our mouse-dragging flag, and
         // accumulate any final bit of mouse-dragging we did:
         g_xMdragTot += (x - g_xMclik);
         g_yMdragTot += (y - g_yMclik);
+        console.log(g_yMclik)
         // Report new mouse position:
         document.getElementById('MouseAtResult').innerHTML = 
           'Mouse At: '+x.toFixed(5)+', '+y.toFixed(5);
-        console.log('myMouseUp: g_xMdragTot,g_yMdragTot =',g_xMdragTot,',\t',g_yMdragTot);
+        // console.log('myMouseUp: g_xMdragTot,g_yMdragTot =',g_xMdragTot,',\t',g_yMdragTot);
 };
     
 function myMouseClick(ev) {
