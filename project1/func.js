@@ -4,15 +4,25 @@ var VSHADER_SOURCE = [
     'attribute vec4 a_Position;',
     'attribute vec4 a_Color;',
     'attribute vec4 a_Normal;',
+    'attribute float a_Face;',
     'uniform mat4 u_modelMatrix;',
     'uniform mat4 u_normalMatrix;',
+    'uniform int u_PickedFace;',
     'varying vec4 v_Color;',
     'void main() {',
     '    gl_Position = u_modelMatrix * a_Position;',
     '    vec3 lightDirection = normalize(vec3(0, 0, 0));',
     '    vec3 normal = normalize((u_normalMatrix * a_Normal).xyz);',
     '    float nDotL = max(dot(normal, lightDirection), 0.0);',
-    '    v_Color = a_Color;',
+    
+    '    int face = int(a_Face);',
+    '    vec3 color = (face == u_PickedFace) ? vec3(1.0) : a_Color.rgb;',
+    '    if(u_PickedFace == 0) {\n' + // In case of 0, insert the face number into alpha
+    '        v_Color = vec4(color, a_Face/255.0);' ,
+    '    } else {' ,
+    '        v_Color =  vec4(color, a_Color.a);' ,
+    '    }',
+    // '    v_Color = a_Color;',
     '}'
     ].join('\n');
 
@@ -166,11 +176,10 @@ function main() {
     gl.program.a_Position = gl.getAttribLocation(gl.program, 'a_Position');
     gl.program.a_Color = gl.getAttribLocation(gl.program, 'a_Color');
     gl.program.a_Normal = gl.getAttribLocation(gl.program, 'a_Normal');
-    if (! gl.program.a_Position) {
+    if (! gl.program.a_Position || !gl.program.a_Color || gl.program.a_Normal) {
       console.log('Failed to get the storage location');
       return false;
-    }
-
+    }  
 
     var shape1 = initVertexBuffersForShape1(gl);
     var shape2 = initVertexBuffersForShape2(gl);
@@ -200,9 +209,10 @@ function main() {
     window.addEventListener("mouseup", myMouseUp);	
     document.onkeydown = function(ev){ keydown(ev, gl, shape1, viewProjMatrix, u_modelMatrix, u_normalMatrix); };
 
+  
     // Set the clear color and enable the depth test
     // gl.clearColor(0.1, 0.1, 0.2, 1.0);
-    gl.clearColor(0.0, 0.0, 0.0, 0.0);
+    gl.clearColor(0.0, 0.0, 0.0, 0.0); //set the color to the input image bg from html
     // initBkgnd();
     gl.enable (gl.BLEND);// Enable alpha blending
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // Set blending function
@@ -210,7 +220,24 @@ function main() {
     gl.enable(gl.DEPTH_TEST); // unless the new Z value is closer to the eye than the old one..
 
 
-    // drawAll(gl, [shape1, shape2], viewProjMatrix, u_modelMatrix); 
+    // Initialize selected surface //from PickFace.js (c) 2012 matsuda and kanda
+    // TODO: Not working...
+    var u_PickedFace = gl.getUniformLocation(gl.program, 'u_PickedFace');
+    var ctx = g_canvas.getContext("webgl", {preserveDrawingBuffer: true});
+    gl.uniform1i(u_PickedFace, -1);  
+    g_canvas.onmousedown = function(ev) {   // Mouse is pressed
+        var x = ev.clientX, y = ev.clientY;
+        var rect = ev.target.getBoundingClientRect(); //the rect canvas area
+        if (rect.left <= x && x < rect.right && rect.top <= y && y < rect.bottom) {
+            // If Clicked position is inside the <canvas>, update the selected surface
+            var x_in_canvas = x - rect.left, y_in_canvas = rect.bottom - y;
+            // var face = checkFace(gl, [shape1, shape2, shape3,shape4], x_in_canvas, y_in_canvas, u_PickedFace, viewProjMatrix, u_modelMatrix, u_normalMatrix);
+            // gl.uniform1i(u_PickedFace, face); // Pass the surface number to u_PickedFace
+            // drawAll(gl, [shape1, shape2, shape3,shape4], viewProjMatrix, u_modelMatrix, u_normalMatrix); 
+        }
+    }
+    
+    
     // ! Animation
     var tick = function() {
         seed = Math.random();
@@ -230,8 +257,19 @@ function main() {
 }
 
 
-
 // * ==================Drawing====================================
+function checkFace(gl, shapeArr, x, y, u_PickedFace, viewProjMatrix, u_modelMatrix, u_normalMatrix) {
+    var pixels = new Uint8Array(4); // Array for storing the pixel value
+    gl.uniform1i(u_PickedFace, 0);  // Draw by writing surface number into alpha value
+    drawAll(gl, shapeArr, viewProjMatrix, u_modelMatrix, u_normalMatrix); 
+    // Read the pixel value of the clicked position. pixels[3] is the surface number
+    gl.readPixels(x, y, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixels);
+    console.log(x)
+    console.log(y)
+    console.log(pixels)
+    return pixels[3];
+  }
+
 function drawAll(gl, shapeArr, viewProjMatrix, u_modelMatrix, u_normalMatrix) { //draw all the shape
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     clrColr = new Float32Array(4);
@@ -1216,7 +1254,7 @@ function myMouseUp(ev) {
         // accumulate any final bit of mouse-dragging we did:
         g_xMdragTot += (x - g_xMclik);
         g_yMdragTot += (y - g_yMclik);
-        console.log(g_yMclik)
+        console.log("yclick: ", g_yMclik)
         // Report new mouse position:
         document.getElementById('MouseAtResult').innerHTML = 
           'Mouse At: '+x.toFixed(5)+', '+y.toFixed(5);
