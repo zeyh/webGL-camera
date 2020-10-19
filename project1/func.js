@@ -51,6 +51,9 @@ var g_angle02Max = 70;
 var g_angle03Min = 0;  
 var g_angle03Max = 70; 
 var g_rainNum = 3;
+var g_time = 0;
+var g_endSHOtime = 100;
+var g_SHOgap = 0.1;
 // * Animation config
 var g_isRun = true;                 // run/stop for animation; used in tick().
 var g_lastMS = Date.now();    		// Timestamp for most-recently-drawn image; 
@@ -171,6 +174,7 @@ function main() {
         seed = Math.random();
         g_angle02 = animate2();  // Update the rotation angle
         g_angle01 = animate1();  // Update the rotation angle
+        g_time = showCurTime();
         drawAll(gl, [shape1, shape2, shape3,shape4], viewProjMatrix, u_modelMatrix, u_normalMatrix); 
         document.getElementById('CurAngleDisplay').innerHTML= 
             'g_angle02= '+g_angle02.toFixed(5);    //reports current angle value:
@@ -184,8 +188,6 @@ function main() {
 }
 
 
-// TODO: 7. user-adjustable color for one 3D part (Weekend)
-// TODO: 8. Scene Graph & report pdf (Weekend)
 
 // * ==================Drawing====================================
 function drawAll(gl, shapeArr, viewProjMatrix, u_modelMatrix, u_normalMatrix) { //draw all the shape
@@ -232,24 +234,39 @@ function drawThunder(gl, [thunder, cube], u_modelMatrix, g_modelMatrix1, viewPro
         drawBox(gl, cube, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix); 
     g_modelMatrix1 = popMatrix();
     
+
+    let dragAngle = 80*g_xMdragTot;
+    if(dragAngle > 90){ dragAngle = 90;}
+    if(dragAngle < -90) { dragAngle = -90;}
+    let oscilateAngle = SHO(dragAngle);
+    let oscTime = Math.floor(g_time/100);
+    if(oscTime > g_endSHOtime/g_SHOgap-1){ 
+        oscTime = g_endSHOtime/g_SHOgap-1;
+        g_modelMatrix1.rotate(0,  0.0, 0.0, 1.0);
+    }
+    //oscilateAngle[oscTime]*80
     //string
-    g_modelMatrix1.rotate(g_chainAngle1,  0.0, 0.0, 1.0);
+    else{
+        g_modelMatrix1.rotate(oscilateAngle[oscTime]*80,  0.0, 0.0, 1.0);
+    }
     pushMatrix(g_modelMatrix1);
-        g_modelMatrix1.scale(0.1,8,0.1);
+        g_modelMatrix1.scale(0.1,10,0.1);
         g_modelMatrix1.translate(0,-1,0);
         drawBox(gl, cube, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix); 
     g_modelMatrix1 = popMatrix();
-
+    
     //bob
     pushMatrix(g_modelMatrix1);
         g_modelMatrix1.scale(1.8, 2, 1.8);
         g_modelMatrix1.translate(0, -5, 0.55);
         drawShapeAdjust(gl, thunder, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix); 
     g_modelMatrix1 = popMatrix();
+
    
 }
 
 function drawShapeAdjust(gl, shape, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix){
+    g_modelMatrix1.rotate(-80*g_xMdragTot,0,0,1);
     drawBox(gl, shape, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix);
 }
 function drawBox(gl, shape, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix){
@@ -361,6 +378,38 @@ function initAttributeVariable(gl, a_attribute, buffer) { // Assign the buffer o
 }
 
 // * ==================Animation====================================
+function SHO(dragAngle){ //underdamped with t is time
+    let initAngle = dragAngle; //init angle to start with
+    let t_stop = g_endSHOtime; //ending time
+    let h = g_SHOgap; //incremental step
+
+    //constant
+    let m = 100 //mass
+    let g = 10; //gravity constant
+    let L = 8; //length of string
+    let b = 20; //underdamping factor  < 2mw_0
+
+    //an array from 0 to 100(end)
+    let t = [t_stop/h]; 
+    t[0] = 0;
+    for(let i=1; i<t_stop/h; i++){
+        t[i] = t[i-1]+h;
+    }
+    //an array of 0 from 1 to length of t
+    let theta = [t.length]; 
+    let angelDerivative = 0.2*3.14;
+    theta[0] = initAngle;
+    theta[1] = theta[0] + angelDerivative*h;
+
+    for(let i=0; i<t.length-2;i++){
+        theta[i+2] =  2*theta[i+1] - theta[i] - 
+                      h*h*g*Math.sin(theta[i+1])/L 
+                      + (b*h/m)*(theta[i]-theta[i+1]); //for t in the middle
+    }
+    return theta;
+
+}
+
 function generateRainSeed(){
     //generate a random vertial y value
     let seed3 = Math.random();
@@ -388,6 +437,14 @@ function keydown(ev, gl, shape, viewProjMatrix, u_MvpMatrix, u_NormalMatrix) {
         break;
       default: return; // Skip drawing at no effective action
     }
+}
+
+var g_last3 = Date.now();
+function showCurTime() {
+    var now = Date.now();  // Calculate the elapsed time
+    var elapsed = now - g_last3;
+    g_last2 = now; 
+    return elapsed;
 }
 
 var g_last2 = Date.now();
@@ -704,13 +761,13 @@ function initVertexBuffersForShape2(gl) { //⚡️
     ]);
 
     var colors = new Float32Array([   
-        204/255, 102/255, 0/255, 1,
+        255/255, 255/255, 0/255, 1, 
         255/255, 102/255, 0/255, 1,
 
         204/255, 102/255, 51/255, 1,
-        255/255, 255/255, 0/255, 1, 
+        204/255, 102/255, 0/255, 1,
 
-        255/255, 255/255, 200/255,  1, 
+        255/255, 255/255, 230/255,  1, 
         255/255, 153/255, 51/255,1, //front
 
         204/255, 102/255, 51/255, 1, //front
