@@ -294,7 +294,6 @@ var g_chainAngle1 = 0, g_chainAngle2 = 90;
 function drawThunder(gl, [thunder, cube], u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix){
     // pushMatrix(g_modelMatrix1);
     // g_modelMatrix1 = popMatrix();
-
     g_modelMatrix1.setTranslate(0,0,0);
     g_modelMatrix1.rotate(g_angle03*0.8,  0.0, 1.0, 0.0); //adjust the position according to keyboard input <-->
     

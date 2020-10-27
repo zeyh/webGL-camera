@@ -1,6 +1,6 @@
 //Todo: ‘Ground Plane’ Grid
 //Todo: position your camera in the x,y plane (z=0)
-//Todo: Double pendulum
+//Done: Double pendulum
 //Todo: Mouse-Drag Rotation of 3D Object usiing quaternion
 //Todo: Show 3D World Axes, and some 3D Model Axes
 //Todo: More Additional, Separate, jointed assemblies
@@ -8,7 +8,7 @@
 //Todo: Perspective Camera AND orthographic Camera
 //Todo: View Control
 
-"use strict";
+'use strict';
 
 const pendulumFcn = (y) => {
     /* 
@@ -49,6 +49,7 @@ function RungeKutta(t_final, h, y0){
                 y - [2.5, 0, 1, 0] //initial condition arr with size of 4
         ref: https://www.youtube.com/watch?v=0LzDiScAcJI
              https://rosettacode.org/wiki/Runge-Kutta_method#Alternate_solution
+             https://www.uio.no/studier/emner/matnat/math/MAT-INF1100/h07/undervisningsmateriale/kap7.pdf
         trying to use RungeKutta solve system of 1st order ODE in the pendulumFcn() 
     */
     // h = 0.1;
@@ -113,15 +114,4 @@ function solveODE(){
         bob2Motion[i] = y[i][2]
     }
     console.log(bob1Motion)
-
-
-
-}
-
-function main(){
-    console.log("I'm in func.js right now...");
-    var g_canvas = document.getElementById('webgl');
-    var gl = getWebGLContext(g_canvas);
-    // pendulum()
-    solveODE();
 }
