@@ -1,3 +1,13 @@
+var g_matrixStack = []; // Array for storing a matrix
+function pushMatrix(m) { // Store the specified matrix to the array
+  var m2 = new Matrix4(m);
+  g_matrixStack.push(m2);
+}
+
+function popMatrix() { // Retrieve the matrix from the array
+  return g_matrixStack.pop();
+}
+
 // * ==================HTML Button Callbacks=========================
 function angleSubmit() {
     // Called when user presses 'Submit' button on our webpage
@@ -166,21 +176,36 @@ function angleSubmit() {
             console.log("myMouse-DOUBLE-Click() on button: ", ev.button); 
     }	
     
-    function keydown(ev, gl, shape, viewProjMatrix, u_MvpMatrix, u_NormalMatrix) {
-        // from JointModel.js (c) 2012 matsuda
-        switch (ev.keyCode) {
-          case 38: // Up arrow key -> the positive rotation of joint1 around the z-axis
-            if (g_chainAngle1 < 360.0) g_chainAngle1 += ANGLE_STEP;
-            break;
-          case 40: // Down arrow key -> the negative rotation of joint1 around the z-axis
-            if (g_chainAngle1 > -360.0) g_chainAngle1 -= ANGLE_STEP;
-            break;
-          case 39: // Right arrow key -> the positive rotation of arm1 around the y-axis
-            g_angle03 = (g_angle03 + ANGLE_STEP) % 360;
-            break;
-          case 37: // Left arrow key -> the negative rotation of arm1 around the y-axis
-          g_angle03 = (g_angle03 - ANGLE_STEP) % 360;
-            break;
-          default: return; // Skip drawing at no effective action
+    // function keydown(ev, gl, shape, viewProjMatrix, u_MvpMatrix, u_NormalMatrix) {
+    //     // from JointModel.js (c) 2012 matsuda
+    //     switch (ev.keyCode) {
+    //       case 38: // Up arrow key -> the positive rotation of joint1 around the z-axis
+    //         if (g_chainAngle1 < 360.0) g_chainAngle1 += ANGLE_STEP;
+    //         break;
+    //       case 40: // Down arrow key -> the negative rotation of joint1 around the z-axis
+    //         if (g_chainAngle1 > -360.0) g_chainAngle1 -= ANGLE_STEP;
+    //         break;
+    //       case 39: // Right arrow key -> the positive rotation of arm1 around the y-axis
+    //         g_angle03 = (g_angle03 + ANGLE_STEP) % 360;
+    //         break;
+    //       case 37: // Left arrow key -> the negative rotation of arm1 around the y-axis
+    //       g_angle03 = (g_angle03 - ANGLE_STEP) % 360;
+    //         break;
+    //       default: return; // Skip drawing at no effective action
+    //     }
+    // }
+
+    function keydown(ev, gl, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix, groundGrid) {
+        //------------------------------------------------------
+        //HTML calls this'Event handler' or 'callback function' when we press a key:
+        
+            if(ev.keyCode == 39) { // The right arrow key was pressed
+        //      g_EyeX += 0.01;
+                        g_EyeX += 0.1;		// INCREASED for perspective camera)
+            } else 
+            if (ev.keyCode == 37) { // The left arrow key was pressed
+        //      g_EyeX -= 0.01;
+                        g_EyeX -= 0.1;		// INCREASED for perspective camera)
+            } else { return; } // Prevent the unnecessary drawing
+            // drawGrid(gl, u_ViewMatrix, viewMatrix, u_ModelMatrix, modelMatrix, groundGrid); 
         }
-    }

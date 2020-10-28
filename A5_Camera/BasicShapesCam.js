@@ -613,7 +613,8 @@ function drawAll(gl, n, currentAngle, modelMatrix, u_ModelMatrix) {
     looking at the 3D point (-1,-2,-0.5),
     using up vector (0,0,1)
   */
-  modelMatrix.lookAt(0.5, 0.5, 0.3, -1, -2, -0.5, 0, 0, 1);
+  modelMatrix.perspective(42.0, 1.0, 1.0, 1000.0);
+  modelMatrix.lookAt(5, 5, 3, -1, -2, -0.5, 0, 0, 1);
   /* b) 
     Vertical field-of-view of 42.0 degrees
     (a 'normal' camera; similar to 50mm lens on 35mm camera)
@@ -621,7 +622,7 @@ function drawAll(gl, n, currentAngle, modelMatrix, u_ModelMatrix) {
     a 'znear' value of +1.0
     a 'zfar' value of    +1000.0
   */
-   modelMatrix.perspective(degToRad(90), 1, 1, 1000);
+
 
   /*
 // STEP 2: add in a 'perspective()' function call here to define 'camera lens':

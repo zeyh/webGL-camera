@@ -452,7 +452,7 @@ function initVertexBuffersForShape4(gl) { //cube
 }
 
 function initVertexBuffersForGroundGrid(gl){
-    var floatsPerVertex = 4; // # of Float32Array elements used for each vertex
+    var floatsPerVertex = 3; // # of Float32Array elements used for each vertex
     var xcount = 100; // # of lines to draw in x,y to make the grid.
     var ycount = 100;
     var xymax = 50.0; // grid size; extends to cover +/-xymax in x and y.
@@ -499,20 +499,21 @@ function initVertexBuffersForGroundGrid(gl){
     var floatsPerVertex2 = 3;
     var colors = new Float32Array(floatsPerVertex2 * 2 * (xcount + ycount));
     for (v = 0, j = 0; v < 2 * xcount; v++, j += floatsPerVertex2) {
-        vertices[j + 0] = xColr[0]; // red
-        vertices[j + 1] = xColr[1]; // grn
-        vertices[j + 2] = xColr[2]; // blu
+        colors[j + 0] = xColr[0]; // red
+        colors[j + 1] = xColr[1]; // grn
+        colors[j + 2] = xColr[2]; // blu
     }
     for (v = 0; v < 2 * ycount; v++, j += floatsPerVertex2) {
-        vertices[j + 0] = yColr[0]; // red
-        vertices[j + 1] = yColr[1]; // grn
-        vertices[j + 2] = yColr[2]; // blu
+        colors[j + 0] = yColr[0]; // red
+        colors[j + 1] = yColr[1]; // grn
+        colors[j + 2] = yColr[2]; // blu
     }
+
     var o = new Object(); // Utilize Object object to return multiple buffer
     o.vertexBuffer = initArrayBuffer(gl, vertices, floatsPerVertex, gl.FLOAT, 'a_Position');
     o.colorBuffer = initArrayBuffer(gl, colors, floatsPerVertex2, gl.FLOAT, 'a_Color');
     o.normalBuffer = initArrayBuffer(gl, vertices, floatsPerVertex, gl.FLOAT, 'a_Normal');
-    o.numIndices = vertices.length;
+    o.numIndices = vertices.length/floatsPerVertex;
     if (!o.vertexBuffer ||  !o.colorBuffer || !o.normalBuffer){
         console.log("fail to Write the vertex property to Buffer Objects")
         return -1;
@@ -520,7 +521,7 @@ function initVertexBuffersForGroundGrid(gl){
 
     // Unbind the buffer object
     gl.bindBuffer(gl.ARRAY_BUFFER, null);
-    
+
     return o;
 }
 

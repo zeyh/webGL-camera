@@ -1,12 +1,3 @@
-//Todo: ‘Ground Plane’ Grid
-//Todo: position your camera in the x,y plane (z=0)
-//Done: Double pendulum
-//Todo: Mouse-Drag Rotation of 3D Object usiing quaternion
-//Todo: Show 3D World Axes, and some 3D Model Axes
-//Todo: More Additional, Separate, jointed assemblies
-//Todo: Two Side-by-Side Viewports in a Re-sizable Webpage
-//Todo: Perspective Camera AND orthographic Camera
-//Todo: View Control
 
 'use strict';
 
