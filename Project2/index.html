@@ -7,19 +7,23 @@
         <link href="https://fonts.googleapis.com/css2?family=Annie+Use+Your+Telescope&family=Caveat&display=swap" rel="stylesheet">        <title>Project 1</title>
         <script src="https://unpkg.com/mathjs@7.5.1/dist/math.min.js"></script>    
         <style>
+            html, body {
+                width:  100%;
+                height: 100%;
+                margin: 0;
+            }
         </style>
 	</head>
 	<body onload="main();">
-        <canvas id="webgl" width="700" height="700">
-			Please use a browser that supports "canvas"
-		</canvas>
+
         <div class="details">
             <hr />
-            <div id='CurAngleDisplay'></div> 
-            <span id='MouseAtResult'  >   Mouse At: </span> 
-            <span id='MouseDragResult'> Mouse Drag: </span> 
-            <div id='Mouse'> Mouse Drag totals (CVV coords) </div>
+            <span id='EyeAt'  >   Eye: </span> 
+            <span id='LookAt'> Look At: </span> 
         </div>
+        <canvas id="webgl">
+			Please use a browser that supports "canvas"
+		</canvas>
 
         <script src="../lib/webgl-utils.js"></script>
         <script src="../lib/webgl-debug.js"></script>
@@ -29,6 +33,7 @@
         <script src="calMotion.js"></script>
         <script src="shaders.js"></script>
         <script src="webglDrawing.js"></script>
+        <script src="helper_func.js"></script>
         <script src="initVBO.js"></script>
         <script src="callBacks.js"></script>
         <!-- 
