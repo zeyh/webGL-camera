@@ -2,13 +2,15 @@
 //Done: Double pendulum
 //Done: View Control
 //Done: Two Side-by-Side Viewports 
-//?Doing: Add some 3D Models
-//Todo: More Additional, Separate, jointed assemblies
+//Done: Add some 3D Models
+//Done: More Additional, Separate, jointed assemblies
+//Done: Perspective Camera
+//Done: Re-sizable Webpage
 //Todo: Mouse-Drag Rotation of 3D Object using quaternion
 //Todo: Show 3D World Axes and add some 3D Model Axes
-//*Almost: Perspective Camera AND orthographic Camera
+//*Almost: orthographic Camera
 //*Almost: position and move your camera in the x,y plane (z=0) 
-//*Almost: Re-sizable Webpage
+
 
 'use strict';
 var g_drawingMode = "triangle";
@@ -24,7 +26,8 @@ var g_LookUp = 0.0;
 var g_speed = 1;
 var g_angle01 = 0.0;
 var g_viewScale = 1;
-var g_cloudAngle = 1, g_cloudAngleRate = 1.2,  g_cloudAngleMin = 0,  g_cloudAngleMax = 2.5; 
+var g_cloudAngle = 1, g_cloudAngleRate = 1.2,  g_cloudAngleMin = 0,  g_cloudAngleMax = 2.5;
+var g_jointAngle = 0, g_jointAngleRate = 1.0,  g_jointAngleMin = -135,  g_jointAngleMax = 135;  
 var g_time = 0, g_endSHOtime = 100, g_SHOgap = 0.1, g_damping1 = 20;
 var canvas;
 
@@ -34,7 +37,7 @@ function drawAll(gl, vbArray, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix
     //scene on the left
     gl.viewport(0, 0, gl.canvas.width/2, gl.canvas.height); 
     var aspectRatio = (gl.drawingBufferWidth/2) / (gl.drawingBufferHeight);
-    projMatrix.setPerspective(42.0, aspectRatio, 1, 100);
+    projMatrix.setPerspective(40.0, aspectRatio, 1, 100);
     viewMatrix.setLookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookX, g_LookY, g_LookZ, 0, 1, 0); //center/look-at point
     modelMatrix.setScale(1,1,1);
 
@@ -48,7 +51,7 @@ function drawAll(gl, vbArray, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix
     //orth scene on the right
     modelMatrix.setScale(1,1,1);
     gl.viewport(gl.canvas.width/2, 0, gl.canvas.width/2, gl.canvas.height); 
-    projMatrix.setOrtho(-10.0, 10.0, -10.0, 10.0, 0.0, 2000.0);
+    projMatrix.setOrtho(-10.0, 10.0, -10.0, 10.0, 1.0, 100.0);
     viewMatrix.setLookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookX, g_LookY, g_LookZ, 0, 1, 0); 
     drawScene(gl, vbArray, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix);
 
@@ -88,7 +91,7 @@ function drawClouds(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatri
 
 }
 
-// TODO: 👇
+// ? physics
 function drawDoublePen(gl, [thunder, cube, sphere], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix){
     modelMatrix.setTranslate(5,4,0);
     modelMatrix.scale(10,10,10)
@@ -224,6 +227,7 @@ function drawAnotherClouds(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, vi
 
 }
 
+// TODO: 👇 Quaterion Rotation + axis
 function drawSingleThunder(gl, thunder, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix){
     pushMatrix(modelMatrix);
         modelMatrix.scale(1, 6, 1);
@@ -240,6 +244,125 @@ function drawSingleThunder(gl, thunder, u_ProjMatrix, projMatrix, u_ViewMatrix, 
     modelMatrix = popMatrix();
 }
 
+// Draw 4 joint assemblies
+function drawJointAssemblies(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix){
+    modelMatrix.setTranslate(-10.0+g_jointAngle/10, 2.0, 3.0+(g_jointAngle*1.5+2)/100);
+    //base
+    var baseHeight = 0.1;
+    //seg1
+    var seg1Length = 0.5;
+    modelMatrix.translate(0.0, baseHeight, 0.0); 
+    modelMatrix.rotate(g_jointAngle*50, 0.0, 0.0, 1.0);
+    pushMatrix(modelMatrix);
+        modelMatrix.scale(0.1, seg1Length, 0.1);
+        drawJoint(gl, shape, u_NormalMatrix, normalMatrix, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix); 
+    modelMatrix = popMatrix();
+
+    //seg2
+    var seg2Length = 0.5;
+    modelMatrix.translate(0.0, seg1Length, 0.0); 
+    modelMatrix.rotate(g_jointAngle*40, 0.0, 0.0, 1.0);
+    pushMatrix(modelMatrix);
+        modelMatrix.scale(0.1, seg2Length, 0.1);
+        drawJoint(gl, shape, u_NormalMatrix, normalMatrix, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix); 
+    modelMatrix = popMatrix();
+
+    //seg3
+    var seg3Length = 0.4;
+    modelMatrix.translate(0.0, seg2Length, 0.0); 
+    modelMatrix.rotate(g_jointAngle*30, 0.0, 0.0, 1.0);
+    pushMatrix(modelMatrix);
+        modelMatrix.scale(0.1, seg3Length, 0.1);
+        drawJoint(gl, shape, u_NormalMatrix, normalMatrix, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix); 
+    modelMatrix = popMatrix();
+
+    //seg4
+    var seg4Length = 0.4;
+    modelMatrix.translate(0.0, seg3Length, 0.0); 
+    modelMatrix.rotate(g_jointAngle*10, 0.0, 0.0, 1.0);
+    pushMatrix(modelMatrix);
+        modelMatrix.scale(0.1, seg4Length, 0.1);
+        drawJoint(gl, shape, u_NormalMatrix, normalMatrix, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix); 
+    modelMatrix = popMatrix();
+
+    //seg5
+    var seg5Length = 0.6;
+    modelMatrix.translate(0.0, seg4Length, 0.0); 
+    modelMatrix.rotate(g_jointAngle*10, 0.0, 0.0, 1.0);
+    pushMatrix(modelMatrix);
+        modelMatrix.scale(0.1, seg5Length, 0.1);
+        drawJoint(gl, shape, u_NormalMatrix, normalMatrix, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix); 
+    modelMatrix = popMatrix();
+
+    //seg6
+    var seg6Length = 0.7;
+    modelMatrix.translate(0.0, seg5Length, 0.0); 
+    modelMatrix.rotate(g_jointAngle*10, 0.0, 0.0, 1.0);
+    pushMatrix(modelMatrix);
+        modelMatrix.scale(0.1, seg6Length, 0.1);
+        drawJoint(gl, shape, u_NormalMatrix, normalMatrix, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix); 
+    modelMatrix = popMatrix();
+}
+
+function drawJointAssemblies2(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix){
+    modelMatrix.setTranslate(10.0-g_jointAngle/10, 3.0, 1.0-(g_jointAngle*0.6+1)/50);
+    //base
+    var baseHeight = 0.1;
+    //seg1
+    var seg1Length = 0.5;
+    modelMatrix.translate(0.0, baseHeight, 0.0); 
+    modelMatrix.rotate(g_jointAngle*10, 0.0, 0.0, 1.0);
+    pushMatrix(modelMatrix);
+        modelMatrix.scale(0.05, seg1Length, 0.05);
+        drawJoint(gl, shape, u_NormalMatrix, normalMatrix, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix); 
+    modelMatrix = popMatrix();
+
+    //seg2
+    var seg2Length = 0.5;
+    modelMatrix.translate(0.0, seg1Length, 0.0); 
+    modelMatrix.rotate(g_jointAngle*10, 0.0, 0.0, 1.0);
+    pushMatrix(modelMatrix);
+        modelMatrix.scale(0.05, seg2Length, 0.05);
+        drawJoint(gl, shape, u_NormalMatrix, normalMatrix, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix); 
+    modelMatrix = popMatrix();
+
+    //seg3
+    var seg3Length = 0.4;
+    modelMatrix.translate(0.0, seg2Length, 0.0); 
+    modelMatrix.rotate(g_jointAngle*10, 0.0, 0.0, 1.0);
+    pushMatrix(modelMatrix);
+        modelMatrix.scale(0.05, seg3Length, 0.05);
+        drawJoint(gl, shape, u_NormalMatrix, normalMatrix, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix); 
+    modelMatrix = popMatrix();
+
+    //seg4
+    var seg4Length = 0.4;
+    modelMatrix.translate(0.0, seg3Length, 0.0); 
+    modelMatrix.rotate(g_jointAngle*10, 0.0, 0.0, 1.0);
+    pushMatrix(modelMatrix);
+        modelMatrix.scale(0.05, seg4Length, 0.05);
+        drawJoint(gl, shape, u_NormalMatrix, normalMatrix, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix); 
+    modelMatrix = popMatrix();
+
+    //seg5
+    var seg5Length = 0.6;
+    modelMatrix.translate(0.0, seg4Length, 0.0); 
+    modelMatrix.rotate(g_jointAngle*10, 0.0, 0.0, 1.0);
+    pushMatrix(modelMatrix);
+        modelMatrix.scale(0.05, seg5Length, 0.05);
+        drawJoint(gl, shape, u_NormalMatrix, normalMatrix, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix); 
+    modelMatrix = popMatrix();
+
+    //seg6
+    var seg6Length = 0.7;
+    modelMatrix.translate(0.0, seg5Length, 0.0); 
+    modelMatrix.rotate(g_jointAngle*10, 0.0, 0.0, 1.0);
+    pushMatrix(modelMatrix);
+        modelMatrix.scale(0.05, seg6Length, 0.05);
+        drawJoint(gl, shape, u_NormalMatrix, normalMatrix, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix); 
+    modelMatrix = popMatrix();
+}
+
 function drawScene(gl, vbArray, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix) {
     viewMatrix.scale(0.4*g_viewScale, 0.4*g_viewScale, 0.4*g_viewScale); //scale everything
     
@@ -253,7 +376,9 @@ function drawScene(gl, vbArray, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatr
         // drawClouds(gl, vbArray[3], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix)
         drawAnotherClouds(gl, vbArray[3], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix)
         drawSingleThunder(gl, vbArray[1], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix)
-
+        drawJointAssemblies(gl, vbArray[2], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix);
+        drawJointAssemblies2(gl, vbArray[2], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix);
+    
     modelMatrix = popMatrix();
 
     //draw grid ground
@@ -276,7 +401,6 @@ function main() {
         console.log('Failed to intialize shaders.');
         return;
     }
-    resizeCanvas(gl, canvas)
 
 
     // Specify gl drawing config
@@ -332,11 +456,13 @@ function main() {
         keyArrowRotateRight(ev);
         keyArrowRotateUp(ev);
     };
-
+    // resizeCanvas(gl, [groundGrid, thunder, cube, semiSphere, sphere],  u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix, u_ModelMatrix, modelMatrix)
     var tick = function () {
         g_cloudAngle = animateCloud();
+        g_jointAngle = animateJoints();
         g_time = showCurTime();
         drawAll(gl, [groundGrid, thunder, cube, semiSphere, sphere],  u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix, u_ModelMatrix, modelMatrix);
+        resizeCanvas(gl, [groundGrid, thunder, cube, semiSphere, sphere],  u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix, u_ModelMatrix, modelMatrix)
         requestAnimationFrame(tick, canvas);
     }
     tick();

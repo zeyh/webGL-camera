@@ -254,10 +254,11 @@ function initWindow() {
     window.addEventListener('resize', resizeCanvas, false);
 
 }
-function resizeCanvas(gl, canvas) {
+function resizeCanvas(gl, arr,  u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix, u_ModelMatrix, modelMatrix) {
     canvas = document.getElementById('webgl');
-    canvas.width = window.innerWidth*20/21;
-    canvas.height = window.innerHeight*20/21;
-    console.log("(width, height):", window.innerWidth, window.innerHeight)
+    canvas.width = window.innerWidth*1;
+    canvas.height = window.innerHeight*7/10;
+    // console.log("(width, height):", window.innerWidth, window.innerHeight)
     //adding a overall drawing function here
+    drawAll(gl, arr,  u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix, u_ModelMatrix, modelMatrix);
 }

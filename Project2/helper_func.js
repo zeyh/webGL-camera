@@ -5,14 +5,16 @@
 "use strict";
 
 function drawJoint(gl, shape, u_NormalMatrix, normalMatrix, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix) {
-    mvpMatrix.set(projMatrix);
-    mvpMatrix.multiply(viewMatrix);
-    mvpMatrix.multiply(modelMatrix);
-    gl.uniformMatrix4fv(u_ModelMatrix, false, mvpMatrix.elements);
-    normalMatrix.setInverseOf(modelMatrix);
-    normalMatrix.transpose();
-    gl.uniformMatrix4fv(u_ModelMatrix, false, normalMatrix.elements);
-    draw(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix, u_ModelMatrix, modelMatrix);
+    pushMatrix(modelMatrix);   // Save the model matrix
+        mvpMatrix.set(projMatrix);
+        mvpMatrix.multiply(viewMatrix);
+        mvpMatrix.multiply(modelMatrix);
+        gl.uniformMatrix4fv(u_ModelMatrix, false, mvpMatrix.elements);
+        normalMatrix.setInverseOf(modelMatrix);
+        normalMatrix.transpose();
+        gl.uniformMatrix4fv(u_NormalMatrix, false, normalMatrix.elements);
+        draw(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix, u_ModelMatrix, modelMatrix);
+    modelMatrix = popMatrix();
 }
 
 function draw(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix) { //general draw function
@@ -34,11 +36,9 @@ function draw(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_
             gl.drawElements(gl.LINE_STRIP, shape.numIndices, gl.UNSIGNED_BYTE, 0);
         } else {
             gl.drawElements(gl.TRIANGLES, shape.numIndices, gl.UNSIGNED_BYTE, 0);
-            // console.log("drawing triangles")
         }
     }
     else {
-        // console.log("drawArrays...");
         gl.drawArrays(gl.LINES, 0, shape.numIndices);
     }
 }
@@ -85,6 +85,23 @@ function showCurTime() {
     }
     var now = Date.now();  // Calculate the elapsed time
     var elapsed = now - g_last3;
-    // console.log(Math.floor(elapsed/1000))
     return elapsed;
+}
+
+var g_last4J = Date.now();
+var isForward2 = true;
+function animateJoints() {
+    var now = Date.now();  // Calculate the elapsed time
+    var elapsed = now - g_last4J;
+    g_last4J = now; 
+    var newAngle = 0;
+    if(isForward2){
+      newAngle = g_jointAngle + (g_jointAngleRate * elapsed) / 360.0;
+    }
+    if(newAngle > g_jointAngleMax){ isForward2 = false;}
+    if(!isForward2){
+      newAngle = g_jointAngle - (g_jointAngleRate * elapsed) / 360.0;
+    } 
+    if(newAngle < g_jointAngleMin){ isForward2 = true;}
+    return newAngle;
 }
