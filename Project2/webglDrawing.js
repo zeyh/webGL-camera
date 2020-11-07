@@ -6,8 +6,8 @@
 //Done: More Additional, Separate, jointed assemblies
 //Done: Perspective Camera
 //Done: Re-sizable Webpage
-//Todo: Mouse-Drag Rotation of 3D Object using quaternion
-//Todo: Show 3D World Axes and add some 3D Model Axes
+//Done: Mouse-Drag Rotation of 3D Object using quaternion
+//Done: Show 3D World Axes and add some 3D Model Axes
 //*Almost: orthographic Camera
 //*Almost: position and move your camera in the x,y plane (z=0) 
 
@@ -19,6 +19,9 @@ var normalMatrix = new Matrix4();
 var viewMatrix = new Matrix4();
 var projMatrix = new Matrix4();
 var mvpMatrix = new Matrix4();
+var quatMatrix = new Matrix4();       
+var qNew = new Quaternion(0,0,0,1); // most-recent mouse drag's rotation
+var qTot = new Quaternion(0,0,0,1);	// 'current' orientation (made from qNew)
 var u_ModelMatrix, u_NormalMatrix, u_ProjMatrix, u_ViewMatrix;
 var g_EyeX = 0.20, g_EyeY = 0.25, g_EyeZ = 4.25; //eye position default
 var g_LookX = 0.0, g_LookY = 0.0, g_LookZ = 0.0;
@@ -31,6 +34,7 @@ var g_jointAngle = 0, g_jointAngleRate = 1.0,  g_jointAngleMin = -135,  g_jointA
 var g_time = 0, g_endSHOtime = 100, g_SHOgap = 0.1, g_damping1 = 20;
 var canvas;
 
+// ! x++:right y++:up z++:far
 function drawAll(gl, vbArray, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     writeHtml() 
@@ -57,8 +61,6 @@ function drawAll(gl, vbArray, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix
 
 }
 
-// ! array order: thunder, cube, semiSphere, sphere
-// ! x++:right y++:up z++:far
 function drawClouds(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix){
     var scaleFactor = 4;
     pushMatrix(modelMatrix);
@@ -91,8 +93,8 @@ function drawClouds(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatri
 
 }
 
-// ? physics
-function drawDoublePen(gl, [thunder, cube, sphere], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix){
+// TODO: 👇 physics not right....
+function draw2Bob(gl, [thunder, cube, sphere], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix){
     modelMatrix.setTranslate(5,4,0);
     modelMatrix.scale(10,10,10)
     // * drawJoint(gl, cube, u_NormalMatrix, normalMatrix, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix); 
@@ -157,6 +159,7 @@ function drawDoublePen(gl, [thunder, cube, sphere], u_ProjMatrix, projMatrix, u_
     modelMatrix = popMatrix();
 }
 
+// TODO: 👇 
 function drawRaindrops(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix){
     draw(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix)
 }
@@ -214,7 +217,8 @@ function drawThunderMotion(gl, [thunder, cube], u_ProjMatrix, projMatrix, u_View
     modelMatrix = popMatrix();
     
 }
-function drawAnotherClouds(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix){
+
+function drawManyClouds(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix){
     pushMatrix(modelMatrix);
         modelMatrix.setTranslate(2,1.6,-3)
         drawClouds(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix)
@@ -227,20 +231,16 @@ function drawAnotherClouds(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, vi
 
 }
 
-// TODO: 👇 Quaterion Rotation + axis
-function drawSingleThunder(gl, thunder, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix){
+// TODO: 👇 draw Quaterion Rotation + axis
+function drawSingleThunder(gl, [thunder, axis], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix){
     pushMatrix(modelMatrix);
-        modelMatrix.scale(1, 6, 1);
-        modelMatrix.translate(-12, -1.2, 0.25);
-        let oscilateAngle2 = SHO2(40);
-        let oscTime2 = Math.floor(g_time/100);
-        if(oscTime2 > g_endSHOtime/g_SHOgap-1){ 
-            oscTime2 = g_endSHOtime/g_SHOgap-1;
-            modelMatrix.rotate(0,  0.0, 0.0, 1.0);
-        }else{
-            modelMatrix.rotate(oscilateAngle2[oscTime2]*80,0,1,0);
-        }
-        drawJoint(gl, thunder, u_NormalMatrix, normalMatrix, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix); 
+        modelMatrix.scale(3, 10, 3);
+        modelMatrix.translate(-4, 0, 0.25);
+        quatMatrix.setFromQuat(qTot.x, qTot.y, qTot.z, qTot.w);
+        modelMatrix.concat(quatMatrix);
+        drawJoint(gl, thunder, u_NormalMatrix, normalMatrix, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix);
+        modelMatrix.translate(-0.5, -0.3, -0.5);
+        drawJoint(gl, axis, u_NormalMatrix, normalMatrix, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix);  
     modelMatrix = popMatrix();
 }
 
@@ -366,19 +366,18 @@ function drawJointAssemblies2(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix,
 function drawScene(gl, vbArray, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix) {
     viewMatrix.scale(0.4*g_viewScale, 0.4*g_viewScale, 0.4*g_viewScale); //scale everything
     
-    //draw shapes
+    //draw shapes 
+    // ! array order: groundGrid, 1.thunder, cube, semiSphere, sphere, 5.axis, thunder2, 7.axis2
     pushMatrix(modelMatrix); 
         modelMatrix.setTranslate(0, 10, -10);
         modelMatrix.scale(1, 1, 1);
         // drawRaindrops(gl, vbArray[4], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix)
         drawThunderMotion(gl, [vbArray[1], vbArray[2], vbArray[4]], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix)
-        drawDoublePen(gl, [vbArray[1], vbArray[2], vbArray[4]], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix)
-        // drawClouds(gl, vbArray[3], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix)
-        drawAnotherClouds(gl, vbArray[3], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix)
-        drawSingleThunder(gl, vbArray[1], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix)
+        draw2Bob(gl, [vbArray[1], vbArray[2], vbArray[4]], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix)
+        drawManyClouds(gl, vbArray[3], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix)
+        drawSingleThunder(gl, [vbArray[6],vbArray[5]], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix)
         drawJointAssemblies(gl, vbArray[2], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix);
         drawJointAssemblies2(gl, vbArray[2], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix);
-    
     modelMatrix = popMatrix();
 
     //draw grid ground
@@ -387,6 +386,8 @@ function drawScene(gl, vbArray, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatr
     viewMatrix.scale(0.4, 0.4,0.4);
     draw(gl, vbArray[0], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix);
 
+    //draw world axis
+    draw(gl, vbArray[7], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix);
 }
 
 function main() {
@@ -436,11 +437,14 @@ function main() {
         console.log('Failed to set the vertex information of groundGrid');
         return;
     }
-    var thunder = initVertexBuffersForShape2(gl); //thunder
+    var thunder = initVertexBuffersForShape2(gl, 1); //thunder Solid
+    var thunder2 = initVertexBuffersForShape2(gl, 0.5); //thunder transparent
     var semiSphere = initVertexBuffersForShape1(gl); //semi-sphere
     var sphere = initVertexBuffersForShape3(gl); //full sphere
     var cube = initVertexBuffersForShape4(gl); //cube
-    if (!thunder || !semiSphere || !sphere || !cube) {
+    var axis = initVertexBuffersForAxis(gl, 2); //axis Short
+    var axis2 = initVertexBuffersForAxis(gl, 20); //axis long for world 
+    if (!thunder || !semiSphere || !sphere || !cube || !axis) {
         console.log('Failed to set the vertex information of objects');
         return;
     }
@@ -457,12 +461,13 @@ function main() {
         keyArrowRotateUp(ev);
     };
     // resizeCanvas(gl, [groundGrid, thunder, cube, semiSphere, sphere],  u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix, u_ModelMatrix, modelMatrix)
+    var vbArray = [groundGrid, thunder, cube, semiSphere, sphere, axis, thunder2, axis2];
     var tick = function () {
         g_cloudAngle = animateCloud();
         g_jointAngle = animateJoints();
         g_time = showCurTime();
-        drawAll(gl, [groundGrid, thunder, cube, semiSphere, sphere],  u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix, u_ModelMatrix, modelMatrix);
-        resizeCanvas(gl, [groundGrid, thunder, cube, semiSphere, sphere],  u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix, u_ModelMatrix, modelMatrix)
+        drawAll(gl, vbArray,  u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix, u_ModelMatrix, modelMatrix);
+        resizeCanvas(gl, vbArray,  u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix, u_ModelMatrix, modelMatrix)
         requestAnimationFrame(tick, canvas);
     }
     tick();

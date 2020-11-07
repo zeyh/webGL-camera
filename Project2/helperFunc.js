@@ -1,8 +1,16 @@
 
 //some useful functions related to drawing and animation here
-
-
 "use strict";
+var g_matrixStack = []; // Array for storing a matrix
+function pushMatrix(m) { // Store the specified matrix to the array
+    var m2 = new Matrix4(m);
+    g_matrixStack.push(m2);
+}
+
+function popMatrix() { // Retrieve the matrix from the array
+    return g_matrixStack.pop();
+}
+
 
 function drawJoint(gl, shape, u_NormalMatrix, normalMatrix, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix) {
     pushMatrix(modelMatrix);   // Save the model matrix

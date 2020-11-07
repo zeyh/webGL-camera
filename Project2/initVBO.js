@@ -194,7 +194,7 @@ function initVertexBuffersForShape1(gl) { //semi-sphere
     return o;
 }
 
-function initVertexBuffersForShape2(gl) { //⚡️
+function initVertexBuffersForShape2(gl, opacity) { //⚡️
     var vertices = new Float32Array([   
         //front
         0.5, 2,    -0.5,  //0
@@ -259,20 +259,20 @@ function initVertexBuffersForShape2(gl) { //⚡️
     ]);
 
     var colors = new Float32Array([   
-        255/255, 255/255, 0/255, 1, 
-        255/255, 102/255, 0/255, 1,
+        255/255, 255/255, 0/255, opacity, 
+        255/255, 102/255, 0/255, opacity,
 
-        204/255, 102/255, 51/255, 1,
-        204/255, 102/255, 0/255, 1,
+        204/255, 102/255, 51/255, opacity,
+        204/255, 102/255, 0/255, opacity,
 
-        255/255, 255/255, 230/255,  1, 
-        255/255, 153/255, 51/255,1, //front
+        255/255, 255/255, 230/255,  opacity, 
+        255/255, 153/255, 51/255,opacity, //front
 
-        204/255, 102/255, 51/255, 1, //front
-        255/255, 153/255, 51/255, 1, //front
+        204/255, 102/255, 51/255, opacity, //front
+        255/255, 153/255, 51/255, opacity, //front
 
-        255/255, 153/255, 51/255, 1, //front
-        255/255, 255/255, 153/255, 1, //front     
+        255/255, 153/255, 51/255, opacity, //front
+        255/255, 255/255, 153/255, opacity, //front     
     ]);
 
     var o = new Object(); // Utilize Object object to return multiple buffer
@@ -525,6 +525,43 @@ function initVertexBuffersForGroundGrid(gl){
     return o;
 }
 
+function initVertexBuffersForAxis(gl, axislength){
+    // let axislength = 2;
+    var floatsPerVertex = 4; //vertices are xyzw
+    var floatsPerVertex2 = 3;//colors are rgb
+    var vertices = new Float32Array([
+        0.0,  0.0,  0.0, 1.0,	
+        axislength,  0.0,  0.0, 1.0, 
+        0.0,  0.0,  0.0, 1.0,
+        0.0,  axislength,  0.0, 1.0,
+        0.0,  0.0,  0.0, 1.0,	
+        0.0,  0.0,  axislength, 1.0,
+    ]);
+    var colors = new Float32Array([   
+        0.3,  0.3,  0.3,
+        1.0,  0.3,  0.3,
+        0.3,  0.3,  0.3,
+        0.3,  1.0,  0.3,
+        0.3,  0.3,  0.3,
+        0.3,  0.3,  1.0,
+    ]);
+    var o = new Object(); // Utilize Object object to return multiple buffer
+    o.vertexBuffer = initArrayBuffer(gl, vertices, floatsPerVertex, gl.FLOAT, 'a_Position');
+    o.colorBuffer = initArrayBuffer(gl, colors, floatsPerVertex2, gl.FLOAT, 'a_Color');
+    o.normalBuffer = initArrayBuffer(gl, vertices, floatsPerVertex, gl.FLOAT, 'a_Normal');
+    o.numIndices = vertices.length/floatsPerVertex;
+    if (!o.vertexBuffer ||  !o.colorBuffer || !o.normalBuffer){
+        console.log("fail to Write the vertex property to Buffer Objects")
+        return -1;
+    }
+
+    // Unbind the buffer object
+    gl.bindBuffer(gl.ARRAY_BUFFER, null);
+
+    return o;
+
+}
+
 function initIndexBuffer(gl,data, type){
     // bind the index array
     var buffer = gl.createBuffer();
@@ -554,3 +591,4 @@ function initArrayBuffer(gl, data, num, type, attribute) {
 
     return buffer;
 }
+
