@@ -34,28 +34,30 @@ var g_jointAngle = 0, g_jointAngleRate = 1.0,  g_jointAngleMin = -135,  g_jointA
 var g_time = 0, g_endSHOtime = 100, g_SHOgap = 0.1, g_damping1 = 20;
 var canvas;
 
-// ! x++:right y++:up z++:far
+
+
+
 function drawAll(gl, vbArray, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    writeHtml() 
-    //scene on the left
+    // writeHtml(); //write eye/lookat value at html
+    flyForward();
+    //perspective scene on the left // ! x++:right y++:up z++:far because setted lookat up as (0,1,0)
     gl.viewport(0, 0, gl.canvas.width/2, gl.canvas.height); 
-    var aspectRatio = (gl.drawingBufferWidth/2) / (gl.drawingBufferHeight);
-    projMatrix.setPerspective(40.0, aspectRatio, 1, 100);
+    if(isFrustrum){//changing between frustrum and perspective
+        projMatrix.setFrustum(params.left, params.right, params.top, params.bottom, params.near, params.far)
+    }else{
+        var aspectRatio = (gl.drawingBufferWidth/2) / (gl.drawingBufferHeight);
+        projMatrix.setPerspective(40.0, aspectRatio, 1, 1000);
+    }
     viewMatrix.setLookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookX, g_LookY, g_LookZ, 0, 1, 0); //center/look-at point
     modelMatrix.setScale(1,1,1);
-
-    gl.uniformMatrix4fv(u_ProjMatrix, false, projMatrix.elements);
-    gl.uniformMatrix4fv(u_ViewMatrix, false, viewMatrix.elements);
-    gl.uniformMatrix4fv(u_ModelMatrix, false, modelMatrix.elements);
-
     drawScene(gl, vbArray, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix, u_ModelMatrix, modelMatrix);
 
 
     //orth scene on the right
     modelMatrix.setScale(1,1,1);
     gl.viewport(gl.canvas.width/2, 0, gl.canvas.width/2, gl.canvas.height); 
-    projMatrix.setOrtho(-10.0, 10.0, -10.0, 10.0, 1.0, 100.0);
+    projMatrix.setOrtho(-2.0, 2.0, -2.0, 2.0, 0.001, 2000.0);
     viewMatrix.setLookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookX, g_LookY, g_LookZ, 0, 1, 0); 
     drawScene(gl, vbArray, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix);
 
@@ -93,7 +95,7 @@ function drawClouds(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatri
 
 }
 
-// TODO: 👇 physics not right....
+// TODO: 👇 some physics' not right....
 function draw2Bob(gl, [thunder, cube, sphere], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix){
     modelMatrix.setTranslate(5,4,0);
     modelMatrix.scale(10,10,10)
@@ -159,7 +161,7 @@ function draw2Bob(gl, [thunder, cube, sphere], u_ProjMatrix, projMatrix, u_ViewM
     modelMatrix = popMatrix();
 }
 
-// TODO: 👇 
+// not used
 function drawRaindrops(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix){
     draw(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix)
 }
@@ -231,7 +233,7 @@ function drawManyClouds(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, viewM
 
 }
 
-// TODO: 👇 draw Quaterion Rotation + axis
+// Done: 👇 draw Quaterion Rotation + axis
 function drawSingleThunder(gl, [thunder, axis], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix){
     pushMatrix(modelMatrix);
         modelMatrix.scale(3, 10, 3);
@@ -240,11 +242,12 @@ function drawSingleThunder(gl, [thunder, axis], u_ProjMatrix, projMatrix, u_View
         modelMatrix.concat(quatMatrix);
         drawJoint(gl, thunder, u_NormalMatrix, normalMatrix, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix);
         modelMatrix.translate(-0.5, -0.3, -0.5);
+        modelMatrix.rotate(-90,1,0,0)
         drawJoint(gl, axis, u_NormalMatrix, normalMatrix, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix);  
     modelMatrix = popMatrix();
 }
 
-// Draw 4 joint assemblies
+// Done: 👇 Draw 4 joint assemblies
 function drawJointAssemblies(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix){
     modelMatrix.setTranslate(-10.0+g_jointAngle/10, 2.0, 3.0+(g_jointAngle*1.5+2)/100);
     //base
@@ -305,7 +308,7 @@ function drawJointAssemblies(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, 
 }
 
 function drawJointAssemblies2(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix){
-    modelMatrix.setTranslate(10.0-g_jointAngle/10, 3.0, 1.0-(g_jointAngle*0.6+1)/50);
+    modelMatrix.setTranslate(3.5, 3.0, 1.0);
     //base
     var baseHeight = 0.1;
     //seg1
@@ -373,7 +376,7 @@ function drawScene(gl, vbArray, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatr
         modelMatrix.scale(1, 1, 1);
         // drawRaindrops(gl, vbArray[4], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix)
         drawThunderMotion(gl, [vbArray[1], vbArray[2], vbArray[4]], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix)
-        draw2Bob(gl, [vbArray[1], vbArray[2], vbArray[4]], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix)
+        // draw2Bob(gl, [vbArray[1], vbArray[2], vbArray[4]], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix)
         drawManyClouds(gl, vbArray[3], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix)
         drawSingleThunder(gl, [vbArray[6],vbArray[5]], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix)
         drawJointAssemblies(gl, vbArray[2], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix);
@@ -391,6 +394,8 @@ function drawScene(gl, vbArray, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatr
 }
 
 function main() {
+    
+
     console.log("I'm in webglDrawing.js right now...");
     canvas = document.getElementById('webgl');
     var gl = getWebGLContext(canvas);
@@ -402,6 +407,7 @@ function main() {
         console.log('Failed to intialize shaders.');
         return;
     }
+    setControlPanel(); //init DAT.GUI for controllers for frustrums
 
 
     // Specify gl drawing config
@@ -424,11 +430,19 @@ function main() {
     // Assign the buffer object to the attribute variable
     gl.program.a_Position = gl.getAttribLocation(gl.program, 'a_Position');
     gl.program.a_Color = gl.getAttribLocation(gl.program, 'a_Color');
-    gl.program.a_Normal = gl.getAttribLocation(gl.program, 'a_Normal');
-    if (!gl.program.a_Position || !gl.program.a_Color || gl.program.a_Normal) {
-        console.log('Failed to get the storage location');
+    // gl.program.a_Normal = gl.getAttribLocation(gl.program, 'a_Normal');
+    if (!gl.getAttribLocation(gl.program, 'a_Position')) {
+        console.log('Failed to get the storage location a_Position');
         return false;
     }
+    if (!gl.program.a_Color) {
+        console.log('Failed to get the storage location a_Color');
+        return false;
+    }
+    // if (!gl.program.a_Normal) {
+    //     console.log('Failed to get the storage location a_Normal');
+    //     return false;
+    // }
 
 
     // init Vertex Buffer
@@ -443,7 +457,7 @@ function main() {
     var sphere = initVertexBuffersForShape3(gl); //full sphere
     var cube = initVertexBuffersForShape4(gl); //cube
     var axis = initVertexBuffersForAxis(gl, 2); //axis Short
-    var axis2 = initVertexBuffersForAxis(gl, 20); //axis long for world 
+    var axis2 = initVertexBuffersForAxis(gl, 80); //axis long for world 
     if (!thunder || !semiSphere || !sphere || !cube || !axis) {
         console.log('Failed to set the vertex information of objects');
         return;

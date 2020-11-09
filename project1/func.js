@@ -176,10 +176,14 @@ function main() {
     // Assign the buffer object to the attribute variable
     gl.program.a_Position = gl.getAttribLocation(gl.program, 'a_Position');
     gl.program.a_Color = gl.getAttribLocation(gl.program, 'a_Color');
-    gl.program.a_Normal = gl.getAttribLocation(gl.program, 'a_Normal');
-    if (! gl.program.a_Position || !gl.program.a_Color || gl.program.a_Normal) {
-      console.log('Failed to get the storage location');
+    // gl.program.a_Normal = gl.getAttribLocation(gl.program, 'a_Normal'); //!<<<<<<<
+    if (! gl.program.a_Position) { 
+      console.log('Failed to get the storage location a_Position' );
       return false;
+    }  
+    if ( !gl.program.a_Color) { 
+        console.log('Failed to get the storage location a_Color');
+        return false;
     }  
 
     var shape1 = initVertexBuffersForShape1(gl);
