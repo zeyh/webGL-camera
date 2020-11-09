@@ -350,9 +350,9 @@ function initVertexBuffersForShape3(gl) { // full sphere from Shadow_highp.js (c
     var o = new Object(); // Utilize Object object to return multiple buffer objects together
   
     // Write vertex information to buffer object
-    o.vertexBuffer = initArrayBuffer(gl, new Float32Array(vertices), 3, gl.FLOAT);
-    o.colorBuffer = initArrayBuffer(gl, new Float32Array(colors), 4, gl.FLOAT);
-    o.normalBuffer = initArrayBuffer(gl, new Float32Array(vertices), 3, gl.FLOAT);
+    o.vertexBuffer = initArrayBuffer(gl, new Float32Array(vertices), 3, gl.FLOAT,  'a_Position');
+    o.colorBuffer = initArrayBuffer(gl, new Float32Array(colors), 4, gl.FLOAT, 'a_Color');
+    o.normalBuffer = initArrayBuffer(gl, new Float32Array(vertices), 3, gl.FLOAT, 'a_Normal');
     o.indexBuffer = initIndexBuffer(gl, new Uint8Array(indices), gl.UNSIGNED_BYTE);
     o.numIndices = indices.length;
     if (!o.vertexBuffer || !o.colorBuffer || !o.indexBuffer) return null; 
@@ -424,13 +424,7 @@ function initVertexBuffersForShape4(gl) { //cube
         16,17,18,  16,18,19,    // down
         20,21,22,  20,22,23     // back
     ]);
-    // var colors = [];
-    // for(let i=0; i<vertices.length/3; i++){
-    //     colors.push(0/255);
-    //     colors.push(0/255);
-    //     colors.push(0/255);
-    //     colors.push(1);
-    // }
+
 
     var o = new Object(); // Utilize Object object to return multiple buffer
     // Write the vertex property to Buffer Objects
@@ -589,6 +583,16 @@ function initArrayBuffer(gl, data, num, type, attribute) {
     buffer.num = num;
     buffer.type = type;
 
+    // Assign the buffer object to the attribute variable
+    var a_attribute = gl.getAttribLocation(gl.program, attribute);
+    if (a_attribute < 0) {
+        console.log('Failed to get the storage location of ' + attribute);
+        return false;
+    }
+    gl.vertexAttribPointer(a_attribute, num, type, false, 0, 0);
+    // Enable the assignment of the buffer object to the attribute variable
+    gl.enableVertexAttribArray(a_attribute);
+    
     return buffer;
 }
 

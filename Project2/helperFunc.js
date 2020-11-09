@@ -67,6 +67,7 @@ function degToRad(d) {
     return d * Math.PI / 180;
 }
 
+// animations =================================
 var g_lastCloud = Date.now();
 var isForward = true;
 function animateCloud() {

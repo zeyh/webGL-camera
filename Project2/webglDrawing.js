@@ -8,9 +8,9 @@
 //Done: Re-sizable Webpage
 //Done: Mouse-Drag Rotation of 3D Object using quaternion
 //Done: Show 3D World Axes and add some 3D Model Axes
-//*Almost: orthographic Camera
-//*Almost: position and move your camera in the x,y plane (z=0) 
-
+//Done: orthographic Camera
+//Done: position and move your camera in the x,y plane (z=0) 
+//?Doing: debug shader/vbo
 
 'use strict';
 var g_drawingMode = "triangle";
@@ -35,19 +35,17 @@ var g_time = 0, g_endSHOtime = 100, g_SHOgap = 0.1, g_damping1 = 20;
 var canvas;
 
 
-
-
 function drawAll(gl, vbArray, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
     // writeHtml(); //write eye/lookat value at html
     flyForward();
-    //perspective scene on the left // ! x++:right y++:up z++:far because setted lookat up as (0,1,0)
+    //perspective scene on the left 
     gl.viewport(0, 0, gl.canvas.width/2, gl.canvas.height); 
     if(isFrustrum){//changing between frustrum and perspective
         projMatrix.setFrustum(params.left, params.right, params.top, params.bottom, params.near, params.far)
     }else{
         var aspectRatio = (gl.drawingBufferWidth/2) / (gl.drawingBufferHeight);
-        projMatrix.setPerspective(40.0, aspectRatio, 1, 1000);
+        projMatrix.setPerspective(40.0, aspectRatio, 1, 10);
     }
     viewMatrix.setLookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookX, g_LookY, g_LookZ, 0, 1, 0); //center/look-at point
     modelMatrix.setScale(1,1,1);
@@ -57,7 +55,7 @@ function drawAll(gl, vbArray, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix
     //orth scene on the right
     modelMatrix.setScale(1,1,1);
     gl.viewport(gl.canvas.width/2, 0, gl.canvas.width/2, gl.canvas.height); 
-    projMatrix.setOrtho(-2.0, 2.0, -2.0, 2.0, 0.001, 2000.0);
+    projMatrix.setOrtho(-3.0, 3.0, -3.0, 3.0, 0.01, 10.0); 
     viewMatrix.setLookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookX, g_LookY, g_LookZ, 0, 1, 0); 
     drawScene(gl, vbArray, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix);
 
@@ -95,7 +93,7 @@ function drawClouds(gl, shape, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatri
 
 }
 
-// TODO: 👇 some physics' not right....
+// TODO: 👇 some physics cal're not right....
 function draw2Bob(gl, [thunder, cube, sphere], u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatrix,  u_ModelMatrix, modelMatrix){
     modelMatrix.setTranslate(5,4,0);
     modelMatrix.scale(10,10,10)
@@ -394,8 +392,6 @@ function drawScene(gl, vbArray, u_ProjMatrix, projMatrix, u_ViewMatrix, viewMatr
 }
 
 function main() {
-    
-
     console.log("I'm in webglDrawing.js right now...");
     canvas = document.getElementById('webgl');
     var gl = getWebGLContext(canvas);
@@ -416,6 +412,7 @@ function main() {
     gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // Set blending function
     gl.enable(gl.DEPTH_TEST); 
 
+
     // Get the storage locations of uniform variables
     var u_ModelMatrix = gl.getUniformLocation(gl.program, 'u_ModelMatrix');
     var u_NormalMatrix = gl.getUniformLocation(gl.program, 'u_NormalMatrix');
@@ -426,8 +423,7 @@ function main() {
         return;
     }
 
-    // Set the vertex information
-    // Assign the buffer object to the attribute variable
+    // Set the vertex information // Assign the buffer object to the attribute variable
     gl.program.a_Position = gl.getAttribLocation(gl.program, 'a_Position');
     gl.program.a_Color = gl.getAttribLocation(gl.program, 'a_Color');
     // gl.program.a_Normal = gl.getAttribLocation(gl.program, 'a_Normal');
