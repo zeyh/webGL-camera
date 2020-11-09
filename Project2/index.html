@@ -7,34 +7,70 @@
         <link href="https://fonts.googleapis.com/css2?family=Annie+Use+Your+Telescope&family=Caveat&display=swap" rel="stylesheet">        <title>Project 1</title>
         <script src="https://unpkg.com/mathjs@7.5.1/dist/math.min.js"></script>    
         <style>
+            html, body {
+                width:  100%;
+                height: 100%;
+                margin: 0;
+            }
+            .arrow { 
+            border: solid black;
+            border-width: 0 3px 3px 0;
+            display: inline-block;
+            padding: 3px;
+            }
+
+            .right {
+            transform: rotate(-45deg);
+            -webkit-transform: rotate(-45deg);
+            }
+
+            .left {
+            transform: rotate(135deg);
+            -webkit-transform: rotate(135deg);
+            }
+
+            .up {
+            transform: rotate(-135deg);
+            -webkit-transform: rotate(-135deg);
+            }
+
+            .down {
+            transform: rotate(45deg);
+            -webkit-transform: rotate(45deg);
+            }
         </style>
 	</head>
 	<body onload="main();">
-        <canvas id="webgl" width="700" height="700">
+
+        <canvas id="webgl">
 			Please use a browser that supports "canvas"
 		</canvas>
-        <div class="details">
-            <hr />
-            <div id='CurAngleDisplay'></div> 
-            <span id='MouseAtResult'  >   Mouse At: </span> 
-            <span id='MouseDragResult'> Mouse Drag: </span> 
-            <div id='Mouse'> Mouse Drag totals (CVV coords) </div>
+        <div class="instructions">
+            <p> transparent ⚡️ - <strong>draggable</strong> with quaterion rotation </p>
+            <p> use <strong>Mouse Scroll</strong> to zoom in or out </p>
+            <h4>  <u>Keyboard instructions for 3d View Control:</u> </h4>
+            <p> <strong>WSAD</strong> for moving forward/backward/left/right </p>
+            <p> <strong>Left <i class="arrow left"></i> and right <i class="arrow right"></i> arrow</strong>  for tilting camera left/right </p>
+            <p> <strong>up <i class="arrow up"></i> and down <i class="arrow down"></i> arrow</strong> for tilting camera up/down </p>
         </div>
+        <!-- div class="details">
+            <hr />
+            <span id='EyeAt'  >   Eye: </span> 
+            <span id='LookAt'> Look At: </span> 
+        </div -->
 
         <script src="../lib/webgl-utils.js"></script>
         <script src="../lib/webgl-debug.js"></script>
         <script src="../lib/cuon-utils.js"></script>
 		<script src="../lib/cuon-matrix-quat03.js"></script>
-  
+        <script src="../lib/dat-gui.js"></script>
+
         <script src="calMotion.js"></script>
         <script src="shaders.js"></script>
         <script src="webglDrawing.js"></script>
+        <script src="helperFunc.js"></script>
         <script src="initVBO.js"></script>
         <script src="callBacks.js"></script>
-        <!-- 
-        <script src="test.js"></script>
-        <script src="callBacks.js"></script>
-        <script src="initVBO.js"></script>
-        -->
+
 	</body>
 </html>

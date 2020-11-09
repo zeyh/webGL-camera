@@ -82,14 +82,13 @@ function main() {
   //       when you apply any of the 3D camera-lens transforms:
   //      (e.g. Matrix4 member functions 'perspective(), frustum(), ortho() ...)
   //======================REVERSED-DEPTH Correction===============================
+//   //  b) reverse the usage of the depth-buffer's stored values, like this:
+//   gl.enable(gl.DEPTH_TEST); // enabled by default, but let's be SURE.
+//   gl.clearDepth(1.0); // each time we 'clear' our depth buffer, set all
+// //   // pixel depths to 0.0  (1.0 is DEFAULT)
+//   gl.depthFunc(gl.LESS); // draw a pixel only if its depth value is GREATER
+//   // than the depth buffer's stored value.
 
-  //  b) reverse the usage of the depth-buffer's stored values, like this:
-  gl.enable(gl.DEPTH_TEST); // enabled by default, but let's be SURE.
-  gl.clearDepth(0.0); // each time we 'clear' our depth buffer, set all
-  // pixel depths to 0.0  (1.0 is DEFAULT)
-  gl.depthFunc(gl.GREATER); // draw a pixel only if its depth value is GREATER
-  // than the depth buffer's stored value.
-  // (gl.LESS is DEFAULT; reverse it!)
   //=====================================================================
 
   // Get handle to graphics system's storage location of u_ModelMatrix
@@ -613,8 +612,6 @@ function drawAll(gl, n, currentAngle, modelMatrix, u_ModelMatrix) {
     looking at the 3D point (-1,-2,-0.5),
     using up vector (0,0,1)
   */
-  modelMatrix.perspective(42.0, 1.0, 1.0, 1000.0);
-  modelMatrix.lookAt(5, 5, 3, -1, -2, -0.5, 0, 0, 1);
   /* b) 
     Vertical field-of-view of 42.0 degrees
     (a 'normal' camera; similar to 50mm lens on 35mm camera)
@@ -624,36 +621,35 @@ function drawAll(gl, n, currentAngle, modelMatrix, u_ModelMatrix) {
   */
 
 
-  /*
+ 
 // STEP 2: add in a 'perspective()' function call here to define 'camera lens':
-  modelMatrix.perspective(	??,   // FOVY: top-to-bottom vertical image angle, in degrees
-                            ??,   // Image Aspect Ratio: camera lens width/height
-                           	??,   // camera z-near distance (always positive; frustum begins at z = -znear)
-                        	??);  // camera z-far distance (always positive; frustum ends at z = -zfar)
+//   modelMatrix.perspective(	??,   // FOVY: top-to-bottom vertical image angle, in degrees
+//                             ??,   // Image Aspect Ratio: camera lens width/height
+//                            	??,   // camera z-near distance (always positive; frustum begins at z = -znear)
+//                         	??);  // camera z-far distance (always positive; frustum ends at z = -zfar)
+modelMatrix.perspective(42.0, 1.0, 1.0, 1000.0);
 
-*/
 
-  /*
 //  STEP 1:
 // Make temporary view matrix that is still close to the origin and
 // won't lose sight of our current CVV contents when used without 
 // a properly-constructed projection matrix.
 //TEMPORARY: 1/10th size camera pose to see what's in CVV locations
-  modelMatrix.lookAt( ??, ??, ??,	// center of projection
-                      ??, ??, ??,	// look-at point 
-                      ??, ??, ??);	// View UP vector.
-*/
+//   modelMatrix.lookAt( 0.5, 0.5, 0.3,	// center of projection
+//                       -1, -2, 0.5,	// look-at point 
+//                       0,   0, 1);	// View UP vector.
 
-  /*
+
+
+  
 // STEP 2: 
 //Replace the temporary view matrix with your final view matrix...
 // GOAL: camera positioned at 3D point (5,5,3), looking at the 
 //       3D point (-1,-2,-0.5),  using up vector (0,0,1).
-
-  modelMatrix.lookAt( ??, ??, ??,	// center of projection
-                      ??, ??, ??,	// look-at point 
-                      ??, ??, ??);	// View UP vector.
-*/
+//   modelMatrix.lookAt( ??, ??, ??,	// center of projection
+//                       ??, ??, ??,	// look-at point 
+//                       ??, ??, ??);	// View UP vector.
+  modelMatrix.lookAt(5, 5, 3, -1, -2, -0.5, 0, 0, 1);
 
   //===========================================================
   //

@@ -73,6 +73,7 @@ var g_xMclik=0.0;		// last mouse button-down position (in CVV coords)
 var g_yMclik=0.0;   
 var g_xMdragTot=0.0;	// total (accumulated) mouse-drag amounts (in CVV coords).
 var g_yMdragTot=0.0;  
+
 var seed;
 var drawingMode = "triangles";
 var g_isMouseUp = false;
@@ -175,10 +176,14 @@ function main() {
     // Assign the buffer object to the attribute variable
     gl.program.a_Position = gl.getAttribLocation(gl.program, 'a_Position');
     gl.program.a_Color = gl.getAttribLocation(gl.program, 'a_Color');
-    gl.program.a_Normal = gl.getAttribLocation(gl.program, 'a_Normal');
-    if (! gl.program.a_Position || !gl.program.a_Color || gl.program.a_Normal) {
-      console.log('Failed to get the storage location');
+    // gl.program.a_Normal = gl.getAttribLocation(gl.program, 'a_Normal'); //!<<<<<<<
+    if (! gl.program.a_Position) { 
+      console.log('Failed to get the storage location a_Position' );
       return false;
+    }  
+    if ( !gl.program.a_Color) { 
+        console.log('Failed to get the storage location a_Color');
+        return false;
     }  
 
     var shape1 = initVertexBuffersForShape1(gl);
@@ -358,15 +363,7 @@ function drawShapeAdjust(gl, shape, u_modelMatrix, g_modelMatrix1, viewProjMatri
     
     drawBox(gl, shape, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix);
 }
-function drawBox(gl, shape, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix){
-    g_mvpMatrix.set(viewProjMatrix);
-    g_mvpMatrix.multiply(g_modelMatrix1);
-    gl.uniformMatrix4fv(u_modelMatrix, false, g_mvpMatrix.elements);
-    g_normalMatrix.setInverseOf(g_modelMatrix1);
-    g_normalMatrix.transpose();
-    gl.uniformMatrix4fv(u_normalMatrix, false, g_normalMatrix.elements);
-    draw(gl, shape,  u_normalMatrix, g_normalMatrix);
-}
+
 
 function drawClouds(gl, shape, u_modelMatrix, g_modelMatrix1){
     //clouds
@@ -438,6 +435,17 @@ function drawShapeRotateDraggable(gl, shape, u_modelMatrix, g_modelMatrix1) {
     g_modelMatrix1.rotate(dist*120.0, -g_yMdragTot+0.0001, g_xMdragTot+0.0001, 0.0);
     draw(gl, shape,  u_modelMatrix, g_modelMatrix1);
 }
+
+function drawBox(gl, shape, u_modelMatrix, g_modelMatrix1, viewProjMatrix, u_normalMatrix){
+    g_mvpMatrix.set(viewProjMatrix);
+    g_mvpMatrix.multiply(g_modelMatrix1);
+    gl.uniformMatrix4fv(u_modelMatrix, false, g_mvpMatrix.elements);
+    g_normalMatrix.setInverseOf(g_modelMatrix1);
+    g_normalMatrix.transpose();
+    gl.uniformMatrix4fv(u_normalMatrix, false, g_normalMatrix.elements);
+    draw(gl, shape,  u_normalMatrix, g_normalMatrix);
+}
+
 function draw(gl, shape, u_modelMatrix, g_modelMatrix1){ //general draw function
     initAttributeVariable(gl, gl.program.a_Position, shape.vertexBuffer);
     initAttributeVariable(gl, gl.program.a_Normal, shape.normalBuffer);
