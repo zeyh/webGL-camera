@@ -15,21 +15,45 @@ var g_LookX = 0.0, g_LookY = 0.0, g_LookZ = 0.0;
 var g_LookUp = 0.0;
 var g_speed = 1;
 
-function drawScene_shadow(gl, shadowProgram, [triangle, cube, thunder, groundGrid], currentAngle, viewProjMatrixFromLight) {
-    // drawTriangle(gl, shadowProgram, triangle, currentAngle, viewProjMatrixFromLight);
-    // mvpMatrixFromLight_t.set(g_mvpMatrix); // Used later
-    // drawJointAssemblies(gl, shadowProgram, cube, viewProjMatrixFromLight);
-    // mvpMatrixFromLight_p.set(g_mvpMatrix); // Used later
+function drawScene_shadow(gl, shadowProgram,  [triangle, cube, thunder, groundGrid, semiSphere, axis, thunder2, axis2], currentAngle, viewProjMatrixFromLight) {
+    //TODO
+    // viewProjMatrix.scale(0.4 * g_viewScale, 0.4 * g_viewScale, 0.4 * g_viewScale); //scale everything
+
+    // pushMatrix(g_modelMatrix);
+    //     drawSingleThunder(gl, shadowProgram, [thunder2, axis], viewProjMatrixFromLight)
+    //     mvpMatrixFromLight_t.set(g_mvpMatrix); // Used later
+    // g_modelMatrix = popMatrix();
+
+    // pushMatrix(g_modelMatrix);
+    //     drawManyClouds(gl, shadowProgram, semiSphere, viewProjMatrix);
+    //     mvpMatrixFromLight_p.set(g_mvpMatrix); // Used later
+    // g_modelMatrix = popMatrix();
     // draw(gl, shadowProgram, thunder, viewProjMatrix);
     // mvpMatrixFromLight_p.set(g_mvpMatrix); // Used later
 }
-function drawAll_shadow(gl, shadowProgram, [triangle, cube, thunder, groundGrid], currentAngle, viewProjMatrixFromLight) {
+function drawAll_shadow(gl, shadowProgram, vbArr, currentAngle, viewProjMatrixFromLight) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    drawScene_shadow(gl, shadowProgram, [triangle, cube, thunder, groundGrid], currentAngle, viewProjMatrixFromLight)
+    flyForward();
+    gl.viewport(0, 0, gl.canvas.width / 2, gl.canvas.height);
+    pushMatrix(viewProjMatrix);
+    if (isFrustrum) {//changing between frustrum and perspective
+        viewProjMatrix.setFrustum(params.left, params.right, params.top, params.bottom, params.near, params.far)
+    } else {
+        var aspectRatio = (gl.drawingBufferWidth / 2) / (gl.drawingBufferHeight);
+        viewProjMatrix.setPerspective(40.0, aspectRatio, 1, 10);
+    }
+    viewProjMatrix.lookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookX, g_LookY, g_LookZ, 0, 1, 0); //center/look-at point
+    drawScene_shadow(gl, shadowProgram, vbArr, currentAngle, viewProjMatrixFromLight)
+    viewProjMatrix = popMatrix();
+
+    gl.viewport(gl.canvas.width/2, 0, gl.canvas.width/2, gl.canvas.height); 
+    viewProjMatrix.setOrtho(-3.0, 3.0, -3.0, 3.0, 0.01, 10.0); 
+    viewProjMatrix.lookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookX, g_LookY, g_LookZ, 0, 1, 0); 
+    drawScene_shadow(gl, shadowProgram, vbArr, currentAngle, viewProjMatrixFromLight)
 }
 
 
-
+var g_jointAngle2 = 0;
 function drawScene(gl, normalProgram, [triangle, cube, thunder, groundGrid, semiSphere, axis, thunder2, axis2], currentAngle, viewProjMatrix) {
     viewProjMatrix.scale(0.4 * g_viewScale, 0.4 * g_viewScale, 0.4 * g_viewScale); //scale everything
     // pushMatrix(g_modelMatrix);
@@ -202,6 +226,7 @@ function drawTriangle(gl, program, triangle, angle, viewProjMatrix) {
 
 function drawJointAssemblies(gl, program, sphere, viewProjMatrix) {
     g_modelMatrix.setTranslate(3.5, 3.0, 1.0);    //base
+    g_modelMatrix.rotate(g_jointAngle2, 0, 1, 0);
     var baseHeight = 0.1;
     //seg1
     var seg1Length = 0.5;
@@ -260,6 +285,8 @@ function drawJointAssemblies(gl, program, sphere, viewProjMatrix) {
 
 function drawJointAssemblies2(gl, program, sphere, viewProjMatrix){
     g_modelMatrix.setTranslate(-10.0+g_jointAngle/10, 2.0, 3.0+(g_jointAngle*1.5+2)/100);
+    g_modelMatrix.rotate(g_jointAngle2, 0, 1, 0);
+
     //base
     var baseHeight = 0.1;
     //seg1

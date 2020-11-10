@@ -75,6 +75,23 @@ function setControlPanel() {
     });
 }
 
+
+var isStop = false;
+function stopMotion1(){
+    if(isStop){
+        //start
+        isStop = false;
+
+    }else{
+        isStop = true;
+    }
+}
+
+var g_jointAngle2 = 0;
+function rotateMotion1(){
+    g_jointAngle2 += 10 % 360;
+}
+
 function disableGui(arr) {
     for (let i = 0; i < arr.length; i++) {
         arr[i].domElement.style.pointerEvents = "none"

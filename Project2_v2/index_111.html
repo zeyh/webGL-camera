@@ -42,6 +42,9 @@
         transform: rotate(45deg);
         -webkit-transform: rotate(45deg);
       }
+      button{
+          float:right
+      }
     </style>
   </head>
 
@@ -49,6 +52,8 @@
     <canvas id="webgl" width="400" height="400">
       Please use a browser that supports "canvas"
     </canvas>
+    <button onclick="stopMotion1()"> STOP/START the rotating multi-Jointed Rod Assemblies</button>
+    <button onclick="rotateMotion1()"> ROTATE the entire multi-Jointed Rod Assemblies</button>
     <div class="instructions">
       <p>
         transparent ⚡️ - <strong>draggable</strong> with quaterion rotation

@@ -134,6 +134,7 @@ function main() {
     gl.clearColor(0, 0, 0, 1);
     gl.enable(gl.DEPTH_TEST);
     gl.enable(gl.BLEND);// Enable alpha blending
+    gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // Set blending function conflict with shadow...?
 
     viewProjMatrixFromLight = new Matrix4(); // Prepare a view projection matrix for generating a shadow map
     viewProjMatrixFromLight.setPerspective(70.0, OFFSCREEN_WIDTH / OFFSCREEN_HEIGHT, 1.0, 200.0);
@@ -153,7 +154,9 @@ function main() {
         canvas.height = window.innerHeight * 7 / 10;
         currentAngle = animate(currentAngle);
         g_cloudAngle = animateCloud();
-        g_jointAngle = animateJoints();
+        if(!isStop){
+            g_jointAngle = animateJoints();
+        }
         g_time = showCurTime();
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);               // Change the drawing destination to FBO
         gl.viewport(0, 0, OFFSCREEN_HEIGHT, OFFSCREEN_HEIGHT); // Set view port for FBO
