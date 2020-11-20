@@ -257,22 +257,22 @@ function initVertexBuffersForGroundGrid(gl) {
 
 function initVertexBuffersForGroundPlane(gl){
     var floatsPerVertex = 3; // # of Float32Array elements used for each vertex
-    var xymax = 50.0; // grid size; extends to cover +/-xymax in x and y.
+    var xymax = 20.0; // grid size; extends to cover +/-xymax in x and y.
     var vertices = new Float32Array([   
         xymax/2, xymax/2, 0,
-        xymax/2, -xymax/2, 0,
-        -xymax/2, xymax/2, 0,
-        -xymax/2, -xymax/2, 0,
+        -1*xymax/2, xymax/2, 0,
+        -1*xymax/2, -1*xymax/2, 0,
+        xymax/2, -1*xymax/2, 0,
     ]);
     var colors = new Float32Array([   
-        13/255,82/255,51/255,1,
-        13/255,82/255,51/255,1,
-        13/255,82/255,51/255,1,
-        13/255,82/255,51/255,1,
+        13*2/255,82*2/255,51*2/255,1,
+        13*2/255,82*2/255,51*2/255,1,
+        13*2/255,82*2/255,51*2/255,1,
+        13*2/255,82*2/255,51*2/255,1,
     ]);
     var indices = new Uint8Array([
         0,1,2,
-        1,2,3,
+        0,2,3,
     ]);
     var o = new Object(); // Utilize Object object to return multiple buffer
     // Write the vertex property to Buffer Objects
@@ -290,6 +290,47 @@ function initVertexBuffersForGroundPlane(gl){
     gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
 
     return o;
+
+
+    // // Create a plane
+    // //  v1------v0
+    // //  |        | 
+    // //  |        |
+    // //  |        |
+    // //  v2------v3
+
+    // // Vertex coordinates
+    // var xymax = 20.0;
+    // var vertices = new Float32Array([
+    //     xymax, xymax,  -1.7, 
+    //     -1* xymax,xymax,  -1.7, 
+    //     -1*xymax, -1*xymax,  -1.7, 
+    //     xymax,  -1*xymax,  -1.7,   // v0-v1-v2-v3
+    // ]);
+
+    // // Colors
+    // var colors = new Float32Array([
+    //     1.0, 1.0, 1.0,    1.0, 1.0, 1.0,  1.0, 1.0, 1.0,   1.0, 1.0, 1.0
+    // ]);
+
+    // // Indices of the vertices
+    // var indices = new Uint8Array([0, 1, 2,   0, 2, 3]);
+
+    // var o = new Object(); // Utilize Object object to return multiple buffer objects together
+
+    // // Write vertex information to buffer object
+    // o.vertexBuffer = initArrayBufferForLaterUse(gl, vertices, 3, gl.FLOAT);
+    // o.colorBuffer = initArrayBufferForLaterUse(gl, colors, 3, gl.FLOAT);
+    // o.indexBuffer = initElementArrayBufferForLaterUse(gl, indices, gl.UNSIGNED_BYTE);
+    // if (!o.vertexBuffer || !o.colorBuffer || !o.indexBuffer) return null; 
+
+    // o.numIndices = indices.length;
+
+    // // Unbind the buffer object
+    // gl.bindBuffer(gl.ARRAY_BUFFER, null);
+    // gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, null);
+
+    // return o;
 }
 
 function initVertexBuffersForShape1(gl) { //semi-sphere

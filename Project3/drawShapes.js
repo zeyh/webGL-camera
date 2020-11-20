@@ -19,98 +19,81 @@ var g_speed = 1;
 // ! Draw the triangle and the plane (for generating a shadow map)
 function drawScene_shadow(gl, shadowProgram,  [triangle, cube, thunder, groundGrid, semiSphere, axis, thunder2, axis2, groundPlane], currentAngle, viewProjMatrixFromLight) {
     //TODO
-    // viewProjMatrixFromLight.scale(0.4 * g_viewScale, 0.4 * g_viewScale, 0.4 * g_viewScale); //scale everything
     pushMatrix(g_modelMatrix);
-        g_modelMatrix.rotate(currentAngle, 0, 1, 0)
-        draw(gl, shadowProgram, triangle, viewProjMatrixFromLight)
+        drawSingleThunder(gl, shadowProgram, [thunder2, axis], viewProjMatrixFromLight)
         mvpMatrixFromLight_t.set(g_mvpMatrix); // Used later
     g_modelMatrix = popMatrix();
 
     pushMatrix(g_modelMatrix);
-        draw(gl, shadowProgram, cube, viewProjMatrixFromLight);
+        drawManyClouds(gl, shadowProgram, semiSphere, viewProjMatrixFromLight);
+        mvpMatrixFromLight_t.set(g_mvpMatrix); // Used later
+    g_modelMatrix = popMatrix();
+
+    pushMatrix(g_modelMatrix);
+        draw(gl, shadowProgram, groundPlane, viewProjMatrixFromLight);
         mvpMatrixFromLight_p.set(g_mvpMatrix); // Used later
     g_modelMatrix = popMatrix();
 }
 
 function drawAll_shadow(gl, shadowProgram, vbArr, currentAngle, viewProjMatrixFromLight) {
-    // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    // gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-    // if (isFrustrum) {//changing between frustrum and perspective
-    //     viewProjMatrixFromLight.setFrustum(params.left, params.right, params.top, params.bottom, params.near, params.far)
-    // } else {
-    //     var aspectRatio = (gl.canvas.width / 2) / (gl.canvas.height);
-    //     // viewProjMatrixFromLight.setPerspective(30.0, aspectRatio, 1, 100);
-    // }
-    viewProjMatrixFromLight.setPerspective(70.0, OFFSCREEN_WIDTH/OFFSCREEN_HEIGHT, 1.0, 200.0);
-    viewProjMatrixFromLight.lookAt(LIGHT[0], LIGHT[1], LIGHT[2], 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
-    // viewProjMatrixFromLight.lookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookX, g_LookY, g_LookZ, 0, 1, 0); //center/look-at point
+    viewProjMatrixFromLight.setPerspective(45.0, (gl.canvas.width) / (gl.canvas.height), 1.0, 200.0);
+    viewProjMatrixFromLight.lookAt(LIGHT[0], LIGHT[1], LIGHT[2], 0, 0, 0, 0.0, 1.0, 0.0);
     drawScene_shadow(gl, shadowProgram, vbArr, currentAngle, viewProjMatrixFromLight)
 }
 
 // ! for regular drawin
 var g_jointAngle2 = 0;
 function drawScene(gl, normalProgram, [triangle, cube, thunder, groundGrid, semiSphere, axis, thunder2, axis2, groundPlane], currentAngle, viewProjMatrix) {
-    // viewProjMatrix.scale(0.4 * g_viewScale, 0.4 * g_viewScale, 0.4 * g_viewScale); //scale everything
+    viewProjMatrix.scale(0.4 * g_viewScale, 0.4 * g_viewScale, 0.4 * g_viewScale); //scale everything
 
     pushMatrix(g_modelMatrix);
-    g_modelMatrix.setRotate(currentAngle, 0, 1, 0)
     gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
-    draw(gl, normalProgram, triangle, viewProjMatrix);
+    drawJointAssemblies(gl, normalProgram, cube, viewProjMatrix);
+    g_modelMatrix = popMatrix();
+    
+    pushMatrix(g_modelMatrix);
+    gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
+    drawJointAssemblies2(gl, normalProgram, cube, viewProjMatrix);
     g_modelMatrix = popMatrix();
 
     pushMatrix(g_modelMatrix);
-    gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_p.elements);
-    draw(gl, normalProgram, cube, viewProjMatrix);
+    gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
+    drawManyClouds(gl, normalProgram, semiSphere, viewProjMatrix);
+    g_modelMatrix = popMatrix();
+    
+    pushMatrix(g_modelMatrix);
+    gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
+    drawThunderMotion(gl, normalProgram, [thunder, cube], viewProjMatrix);
+    g_modelMatrix = popMatrix();
+    
+    pushMatrix(g_modelMatrix);
+    gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
+    drawSingleThunder(gl, normalProgram, [thunder2, axis], viewProjMatrix)
     g_modelMatrix = popMatrix();
 
-    // pushMatrix(g_modelMatrix);
-    // gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
-    // drawJointAssemblies(gl, normalProgram, cube, viewProjMatrix);
-    // g_modelMatrix = popMatrix();
-    
-    // pushMatrix(g_modelMatrix);
-    // gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
-    // drawJointAssemblies2(gl, normalProgram, cube, viewProjMatrix);
-    // g_modelMatrix = popMatrix();
-
-    // pushMatrix(g_modelMatrix);
-    // gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
-    // drawManyClouds(gl, normalProgram, semiSphere, viewProjMatrix);
-    // g_modelMatrix = popMatrix();
-    
-    // pushMatrix(g_modelMatrix);
-    // gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
-    // drawThunderMotion(gl, normalProgram, [thunder, cube], viewProjMatrix);
-    // g_modelMatrix = popMatrix();
-    
-    // pushMatrix(g_modelMatrix);
-    // gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
-    // drawSingleThunder(gl, normalProgram, [thunder2, axis], viewProjMatrix)
-    // g_modelMatrix = popMatrix();
-
-    // viewProjMatrix.rotate(-90.0, 1, 0, 0);
-    // viewProjMatrix.translate(0.0, 0.0, -0.6);
-    // viewProjMatrix.scale(0.4, 0.4, 0.4);
-    // gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_p.elements);
-    // draw(gl, normalProgram, groundPlane, viewProjMatrix);
+    pushMatrix(g_modelMatrix);
+    viewProjMatrix.rotate(-90.0, 1, 0, 0);
+    viewProjMatrix.translate(0.0, 0.0, -0.6);
+    viewProjMatrix.scale(0.4, 0.4, 0.4);
+    gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_p.elements);
+    draw(gl, normalProgram, groundPlane, viewProjMatrix);
+    g_modelMatrix = popMatrix();
     
 }
 
 function drawAll(gl, normalProgram, vbArr, currentAngle, viewProjMatrix) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    // flyForward();
+    flyForward();
     
-    // gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-    // if (isFrustrum) {//changing between frustrum and perspective
-    //     viewProjMatrix.setFrustum(params.left, params.right, params.top, params.bottom, params.near, params.far)
-    // } else {
-    //     var aspectRatio = (gl.canvas.width / 2) / (gl.canvas.height);
-    //     viewProjMatrix.setPerspective(30.0, aspectRatio, 1, 100);
-    // }
-    // viewProjMatrix.lookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookX, g_LookY, g_LookZ, 0, 1, 0); //center/look-at point
+    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    if (isFrustrum) {//changing between frustrum and perspective
+        viewProjMatrix.setFrustum(params.left, params.right, params.top, params.bottom, params.near, params.far)
+    } else {
+        var aspectRatio = (gl.canvas.width) / (gl.canvas.height);
+        viewProjMatrix.setPerspective(45.0, aspectRatio, 1, 100);
+    }
+    viewProjMatrix.lookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookX, g_LookY, g_LookZ, 0, 1, 0); //center/look-at point
     
-    viewProjMatrix.setPerspective(45, (gl.canvas.width) / (gl.canvas.height), 1.0, 100.0);
-    viewProjMatrix.lookAt(0.0, 7.0, 9.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
     drawScene(gl, normalProgram, vbArr, currentAngle, viewProjMatrix);
 }
 
@@ -124,7 +107,7 @@ function drawManyClouds(gl, program, shape, viewProjMatrix){
     g_modelMatrix = popMatrix();
 
     pushMatrix(g_modelMatrix);
-        g_modelMatrix.setTranslate(-2,1.6,-5)
+        g_modelMatrix.setTranslate(-2,1.6,3)
         drawClouds(gl, program, shape, viewProjMatrix)
     g_modelMatrix = popMatrix();
 

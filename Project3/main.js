@@ -1,13 +1,13 @@
 
 var OFFSCREEN_WIDTH = 2048, OFFSCREEN_HEIGHT = 2048;
-var LIGHT = [0, 7, 2]; // Light position(x, y, z)
+var LIGHT = [0,0,0]; // Light position(x, y, z) //0,7,2
 var canvas;
 
 function main() {
     // Retrieve <canvas> element
     console.log("I'm in webglDrawing.js right now...");
     canvas = document.getElementById('webgl');
-    // setControlPanel(); //init DAT.GUI for controllers for frustrums
+    setControlPanel(); //init DAT.GUI for controllers for frustrums
     // Get the rendering context for WebGL
     var gl = getWebGLContext(canvas);
     if (!gl) {
