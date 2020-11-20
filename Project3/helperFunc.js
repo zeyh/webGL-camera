@@ -1,5 +1,6 @@
 var g_speed = 1;
 var g_angle01 = 0.0;
+var currentAngle = 0.0;
 var g_viewScale = 1;
 var g_cloudAngle = 1, g_cloudAngleRate = 1.2,  g_cloudAngleMin = 0,  g_cloudAngleMax = 2.5;
 var g_jointAngle = 0, g_jointAngleRate = 1.0,  g_jointAngleMin = -135,  g_jointAngleMax = 135;  

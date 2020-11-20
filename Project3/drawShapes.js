@@ -1,10 +1,11 @@
 // Coordinate transformation matrix
 var g_modelMatrix = new Matrix4();
 var g_mvpMatrix = new Matrix4();
-var mvpMatrixFromLight_t;
-var mvpMatrixFromLight_p;
+var mvpMatrixFromLight_t = new Matrix4();;
+var mvpMatrixFromLight_p = new Matrix4();;
 var viewProjMatrixFromLight;
 var viewProjMatrix  = new Matrix4();  
+var viewProjMatrixFromLight = new Matrix4();
 
 var quatMatrix = new Matrix4();   
 var qNew = new Quaternion(0, 0, 0, 1); // most-recent mouse drag's rotation
@@ -19,82 +20,97 @@ var g_speed = 1;
 function drawScene_shadow(gl, shadowProgram,  [triangle, cube, thunder, groundGrid, semiSphere, axis, thunder2, axis2, groundPlane], currentAngle, viewProjMatrixFromLight) {
     //TODO
     // viewProjMatrixFromLight.scale(0.4 * g_viewScale, 0.4 * g_viewScale, 0.4 * g_viewScale); //scale everything
-    
     pushMatrix(g_modelMatrix);
-        drawSingleThunder(gl, shadowProgram, [thunder2, axis], viewProjMatrixFromLight)
-        mvpMatrixFromLight_t.set(viewProjMatrixFromLight); // Used later
+        g_modelMatrix.rotate(currentAngle, 0, 1, 0)
+        draw(gl, shadowProgram, triangle, viewProjMatrixFromLight)
+        mvpMatrixFromLight_t.set(g_mvpMatrix); // Used later
     g_modelMatrix = popMatrix();
 
     pushMatrix(g_modelMatrix);
-        draw(gl, shadowProgram, groundPlane, viewProjMatrixFromLight);
-        mvpMatrixFromLight_p.set(viewProjMatrixFromLight); // Used later
+        draw(gl, shadowProgram, cube, viewProjMatrixFromLight);
+        mvpMatrixFromLight_p.set(g_mvpMatrix); // Used later
     g_modelMatrix = popMatrix();
 }
 
 function drawAll_shadow(gl, shadowProgram, vbArr, currentAngle, viewProjMatrixFromLight) {
-    gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    flyForward();
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-    if (isFrustrum) {//changing between frustrum and perspective
-        viewProjMatrixFromLight.setFrustum(params.left, params.right, params.top, params.bottom, params.near, params.far)
-    } else {
-        var aspectRatio = (gl.canvas.width / 2) / (gl.canvas.height);
-        viewProjMatrixFromLight.setPerspective(40.0, aspectRatio, 1, 100);
-    }
-    viewProjMatrixFromLight.lookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookX, g_LookY, g_LookZ, 0, 1, 0); //center/look-at point
+    // gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+    // gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    // if (isFrustrum) {//changing between frustrum and perspective
+    //     viewProjMatrixFromLight.setFrustum(params.left, params.right, params.top, params.bottom, params.near, params.far)
+    // } else {
+    //     var aspectRatio = (gl.canvas.width / 2) / (gl.canvas.height);
+    //     // viewProjMatrixFromLight.setPerspective(30.0, aspectRatio, 1, 100);
+    // }
+    viewProjMatrixFromLight.setPerspective(70.0, OFFSCREEN_WIDTH/OFFSCREEN_HEIGHT, 1.0, 200.0);
+    viewProjMatrixFromLight.lookAt(LIGHT[0], LIGHT[1], LIGHT[2], 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
+    // viewProjMatrixFromLight.lookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookX, g_LookY, g_LookZ, 0, 1, 0); //center/look-at point
     drawScene_shadow(gl, shadowProgram, vbArr, currentAngle, viewProjMatrixFromLight)
 }
 
 // ! for regular drawin
 var g_jointAngle2 = 0;
 function drawScene(gl, normalProgram, [triangle, cube, thunder, groundGrid, semiSphere, axis, thunder2, axis2, groundPlane], currentAngle, viewProjMatrix) {
-    viewProjMatrix.scale(0.4 * g_viewScale, 0.4 * g_viewScale, 0.4 * g_viewScale); //scale everything
+    // viewProjMatrix.scale(0.4 * g_viewScale, 0.4 * g_viewScale, 0.4 * g_viewScale); //scale everything
 
     pushMatrix(g_modelMatrix);
+    g_modelMatrix.setRotate(currentAngle, 0, 1, 0)
     gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
-    drawJointAssemblies(gl, normalProgram, cube, viewProjMatrix);
-    g_modelMatrix = popMatrix();
-    
-    pushMatrix(g_modelMatrix);
-    gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
-    drawJointAssemblies2(gl, normalProgram, cube, viewProjMatrix);
+    draw(gl, normalProgram, triangle, viewProjMatrix);
     g_modelMatrix = popMatrix();
 
     pushMatrix(g_modelMatrix);
-    gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
-    drawManyClouds(gl, normalProgram, semiSphere, viewProjMatrix);
-    g_modelMatrix = popMatrix();
-    
-    pushMatrix(g_modelMatrix);
-    gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
-    drawThunderMotion(gl, normalProgram, [thunder, cube], viewProjMatrix);
-    g_modelMatrix = popMatrix();
-    
-    pushMatrix(g_modelMatrix);
-    gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
-    drawSingleThunder(gl, normalProgram, [thunder2, axis], viewProjMatrix)
-    g_modelMatrix = popMatrix();
-
-    viewProjMatrix.rotate(-90.0, 1, 0, 0);
-    viewProjMatrix.translate(0.0, 0.0, -0.6);
-    viewProjMatrix.scale(0.4, 0.4, 0.4);
     gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_p.elements);
-    draw(gl, normalProgram, groundPlane, viewProjMatrix);
+    draw(gl, normalProgram, cube, viewProjMatrix);
+    g_modelMatrix = popMatrix();
+
+    // pushMatrix(g_modelMatrix);
+    // gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
+    // drawJointAssemblies(gl, normalProgram, cube, viewProjMatrix);
+    // g_modelMatrix = popMatrix();
+    
+    // pushMatrix(g_modelMatrix);
+    // gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
+    // drawJointAssemblies2(gl, normalProgram, cube, viewProjMatrix);
+    // g_modelMatrix = popMatrix();
+
+    // pushMatrix(g_modelMatrix);
+    // gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
+    // drawManyClouds(gl, normalProgram, semiSphere, viewProjMatrix);
+    // g_modelMatrix = popMatrix();
+    
+    // pushMatrix(g_modelMatrix);
+    // gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
+    // drawThunderMotion(gl, normalProgram, [thunder, cube], viewProjMatrix);
+    // g_modelMatrix = popMatrix();
+    
+    // pushMatrix(g_modelMatrix);
+    // gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
+    // drawSingleThunder(gl, normalProgram, [thunder2, axis], viewProjMatrix)
+    // g_modelMatrix = popMatrix();
+
+    // viewProjMatrix.rotate(-90.0, 1, 0, 0);
+    // viewProjMatrix.translate(0.0, 0.0, -0.6);
+    // viewProjMatrix.scale(0.4, 0.4, 0.4);
+    // gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_p.elements);
+    // draw(gl, normalProgram, groundPlane, viewProjMatrix);
     
 }
 
 function drawAll(gl, normalProgram, vbArr, currentAngle, viewProjMatrix) {
     gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-    flyForward();
+    // flyForward();
     
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-    if (isFrustrum) {//changing between frustrum and perspective
-        viewProjMatrix.setFrustum(params.left, params.right, params.top, params.bottom, params.near, params.far)
-    } else {
-        var aspectRatio = (gl.canvas.width / 2) / (gl.canvas.height);
-        viewProjMatrix.setPerspective(40.0, aspectRatio, 1, 100);
-    }
-    viewProjMatrix.lookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookX, g_LookY, g_LookZ, 0, 1, 0); //center/look-at point
+    // gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
+    // if (isFrustrum) {//changing between frustrum and perspective
+    //     viewProjMatrix.setFrustum(params.left, params.right, params.top, params.bottom, params.near, params.far)
+    // } else {
+    //     var aspectRatio = (gl.canvas.width / 2) / (gl.canvas.height);
+    //     viewProjMatrix.setPerspective(30.0, aspectRatio, 1, 100);
+    // }
+    // viewProjMatrix.lookAt(g_EyeX, g_EyeY, g_EyeZ, g_LookX, g_LookY, g_LookZ, 0, 1, 0); //center/look-at point
+    
+    viewProjMatrix.setPerspective(45, (gl.canvas.width) / (gl.canvas.height), 1.0, 100.0);
+    viewProjMatrix.lookAt(0.0, 7.0, 9.0, 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
     drawScene(gl, normalProgram, vbArr, currentAngle, viewProjMatrix);
 }
 

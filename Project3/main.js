@@ -7,8 +7,7 @@ function main() {
     // Retrieve <canvas> element
     console.log("I'm in webglDrawing.js right now...");
     canvas = document.getElementById('webgl');
-    setControlPanel(); //init DAT.GUI for controllers for frustrums
-
+    // setControlPanel(); //init DAT.GUI for controllers for frustrums
     // Get the rendering context for WebGL
     var gl = getWebGLContext(canvas);
     if (!gl) {
@@ -80,14 +79,6 @@ function main() {
     // gl.enable(gl.BLEND);// Enable alpha blending
     // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // Set blending function conflict with shadow...?
 
-    viewProjMatrixFromLight = new Matrix4(); // Prepare a view projection matrix for generating a shadow map
-    viewProjMatrixFromLight.setPerspective(70.0, OFFSCREEN_WIDTH / OFFSCREEN_HEIGHT, 1.0, 200.0);
-    viewProjMatrixFromLight.lookAt(LIGHT[0], LIGHT[1], LIGHT[2], 0.0, 0.0, 0.0, 0.0, 1.0, 0.0);
-
-    var currentAngle = 0.0; // Current rotation angle (degrees)
-    mvpMatrixFromLight_t = new Matrix4(); // A model view projection matrix from light source (for triangle)
-    mvpMatrixFromLight_p = new Matrix4(); // A model view projection matrix from light source (for plane)
-    
     var vbArray = [triangle, cube, thunder, groundGrid, semiSphere, axis, thunder2, axis2, groundPlane];
     var tick = function () {
         canvas.width = window.innerWidth * 1; //resize canvas
@@ -98,6 +89,7 @@ function main() {
             g_jointAngle = animateJoints();
         }
         g_time = showCurTime();
+
         gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);               // Change the drawing destination to FBO
         gl.viewport(0, 0, OFFSCREEN_HEIGHT, OFFSCREEN_HEIGHT); // Set view port for FBO
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);   // Clear FBO    
@@ -110,9 +102,9 @@ function main() {
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);    // Clear color and depth buffer
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
 
+        // ! for regular drawin
         gl.useProgram(normalProgram); // Set the shader for regular drawing
         gl.uniform1i(normalProgram.u_ShadowMap, 0);  // Pass 0 because gl.TEXTURE0 is enabled
-        // ! for regular drawin
         drawAll(gl, normalProgram, vbArray, currentAngle, viewProjMatrix)
 
         window.requestAnimationFrame(tick, canvas);
