@@ -1,13 +1,11 @@
-
-var OFFSCREEN_WIDTH = 2048, OFFSCREEN_HEIGHT = 2048;
-var LIGHT = [0,0,0]; // Light position(x, y, z) //0,7,2
 var canvas;
+var normalProgram;
 
 function main() {
     // Retrieve <canvas> element
     console.log("I'm in webglDrawing.js right now...");
     canvas = document.getElementById('webgl');
-    setControlPanel(); //init DAT.GUI for controllers for frustrums
+    // setControlPanel(); //init DAT.GUI for controllers for frustrums
     // Get the rendering context for WebGL
     var gl = getWebGLContext(canvas);
     if (!gl) {
@@ -15,43 +13,46 @@ function main() {
         return;
     }
 
-    // Initialize shaders for generating a shadow map
-    var shadowProgram = createProgram(gl, SHADOW_VSHADER_SOURCE, SHADOW_FSHADER_SOURCE);
-    shadowProgram.a_Position = gl.getAttribLocation(shadowProgram, 'a_Position');
-    shadowProgram.u_MvpMatrix = gl.getUniformLocation(shadowProgram, 'u_MvpMatrix');
-    if (shadowProgram.a_Position < 0 || !shadowProgram.u_MvpMatrix) {
-        console.log('Failed to get the storage location of attribute or uniform variable from shadowProgram');
+    // Initialize shaders for regular drawing
+    var normalProgram = createProgram(gl, VSHADER_SOURCE, FSHADER_SOURCE);
+    if (!initShaders(gl, VSHADER_SOURCE, FSHADER_SOURCE)) { //bind normal program to gl.program too...
+        console.log('Failed to intialize shaders.');
         return;
     }
 
-    // Initialize shaders for regular drawing
-    var normalProgram = createProgram(gl, VSHADER_SOURCE, FSHADER_SOURCE);
     normalProgram.a_Position = gl.getAttribLocation(normalProgram, 'a_Position');
     normalProgram.a_Color = gl.getAttribLocation(normalProgram, 'a_Color');
     normalProgram.u_MvpMatrix = gl.getUniformLocation(normalProgram, 'u_MvpMatrix');
-    normalProgram.u_MvpMatrixFromLight = gl.getUniformLocation(normalProgram, 'u_MvpMatrixFromLight');
-    normalProgram.u_ShadowMap = gl.getUniformLocation(normalProgram, 'u_ShadowMap');
-    if (normalProgram.a_Position < 0 || normalProgram.a_Color < 0 || !normalProgram.u_MvpMatrix ||
-        !normalProgram.u_MvpMatrixFromLight || !normalProgram.u_ShadowMap) {
+    normalProgram.u_NormalMatrix = gl.getUniformLocation(normalProgram, 'u_NormalMatrix');
+    if (normalProgram.a_Position < 0 || normalProgram.a_Color < 0 
+        || !normalProgram.u_MvpMatrix ||
+        !normalProgram.u_NormalMatrix) {
         console.log('Failed to get the storage location of attribute or uniform variable from normalProgram');
         return;
     }
 
     // ! Set the vertex information
-    var triangle = initVertexBuffersForTriangle(gl);
-    var cube = initVertexBuffersForShape4(gl);
-    var groundGrid = initVertexBuffersForGroundGrid(gl);
-    var thunder2 = initVertexBuffersForShape2(gl, 0.5);
-    var thunder = initVertexBuffersForShape2(gl, 1);
-    var semiSphere = initVertexBuffersForShape1(gl);
-    var axis = initVertexBuffersForAxis(gl, 2); //axis Short
-    var axis2 = initVertexBuffersForAxis(gl, 80); //axis long for world 
+    // var triangle = initVertexBuffersForTriangle(gl);
+    // var cube = initVertexBuffersForShape4(gl);
+    // var groundGrid = initVertexBuffersForGroundGrid(gl);
+    // var thunder2 = initVertexBuffersForShape2(gl, 0.5);
+    // var thunder = initVertexBuffersForShape2(gl, 1);
+    // var semiSphere = initVertexBuffersForShape1(gl);
+    // var axis = initVertexBuffersForAxis(gl, 2); //axis Short
+    // var axis2 = initVertexBuffersForAxis(gl, 80); //axis long for world 
     var groundPlane = initVertexBuffersForGroundPlane(gl); //axis long for world 
     var sphere = initVertexBuffersForSphere(gl, 0.6);
-    if (!triangle || !cube || !groundGrid || !thunder || !semiSphere || !axis || !groundPlane || !sphere) {
+    // var cube2 = initVertexBuffersForCube2(gl, 0.6);
+    // if (!triangle || !cube || !groundGrid || !thunder 
+    //     || !semiSphere || !axis || !groundPlane || !sphere ) {
+    //     console.log('Failed to set the vertex information');
+    //     return;
+    // }
+    if ( !sphere || !groundPlane) {
         console.log('Failed to set the vertex information');
         return;
     }
+
 
     window.addEventListener("mousedown", myMouseDown);
     window.addEventListener("mousemove", myMouseMove);
@@ -65,47 +66,31 @@ function main() {
         keyArrowRotateUp(ev);
     };
 
-    // Initialize framebuffer object (FBO)  
-    var fbo = initFramebufferObject(gl);
-    if (!fbo) {
-        console.log('Failed to initialize framebuffer object');
-        return;
-    }
-    gl.activeTexture(gl.TEXTURE0); // Set a texture object to the texture unit
-    gl.bindTexture(gl.TEXTURE_2D, fbo.texture);
 
     // Set the clear color and enable the depth test
-    gl.clearColor(0, 0, 0, 1);
+    gl.clearColor(0.3, 0.3, 0.3, 1.0);
     gl.enable(gl.DEPTH_TEST);
     // gl.enable(gl.BLEND);// Enable alpha blending
     // gl.blendFunc(gl.SRC_ALPHA, gl.ONE_MINUS_SRC_ALPHA); // Set blending function conflict with shadow...?
 
-    var vbArray = [triangle, cube, thunder, groundGrid, semiSphere, axis, thunder2, axis2, groundPlane, sphere];
+    // var vbArray = [triangle, cube, thunder, groundGrid, semiSphere, axis, thunder2, axis2, groundPlane, sphere];
+    var vbArray = [null, null, null, null, null, null, null, null, groundPlane, sphere];
     var tick = function () {
         canvas.width = window.innerWidth * 1; //resize canvas
         canvas.height = window.innerHeight * 7 / 10;
         currentAngle = animate(currentAngle);
+
         g_cloudAngle = animateCloud();
         if(!isStop){
             g_jointAngle = animateJoints();
         }
         g_time = showCurTime();
 
-        gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);               // Change the drawing destination to FBO
-        gl.viewport(0, 0, OFFSCREEN_HEIGHT, OFFSCREEN_HEIGHT); // Set view port for FBO
-        gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);   // Clear FBO    
 
-        gl.useProgram(shadowProgram); // Set shaders for generating a shadow map
-        // ! Draw the triangle and the plane (for generating a shadow map)
-        drawAll_shadow(gl, shadowProgram, vbArray, currentAngle, viewProjMatrixFromLight);
-
-        gl.bindFramebuffer(gl.FRAMEBUFFER, null);               // Change the drawing destination to color buffer
         gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);    // Clear color and depth buffer
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
         // ! for regular drawin
         gl.useProgram(normalProgram); // Set the shader for regular drawing
-        gl.uniform1i(normalProgram.u_ShadowMap, 0);  // Pass 0 because gl.TEXTURE0 is enabled
         drawAll(gl, normalProgram, vbArray, currentAngle, viewProjMatrix)
 
         window.requestAnimationFrame(tick, canvas);

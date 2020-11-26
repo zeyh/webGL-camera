@@ -20,7 +20,7 @@ var SHADOW_FSHADER_SOURCE =
     '  gl_FragColor = rgbaDepth;\n' +
     '}\n';
 
-// Vertex shader program for regular drawing
+// ! Vertex shader program for regular drawing
 var VSHADER_SOURCE =
     'attribute vec4 a_Position;\n' +
     'attribute vec4 a_Color;\n' +

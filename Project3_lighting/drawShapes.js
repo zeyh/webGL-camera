@@ -1,11 +1,9 @@
 // Coordinate transformation matrix
 var g_modelMatrix = new Matrix4();
 var g_mvpMatrix = new Matrix4();
-var mvpMatrixFromLight_t = new Matrix4();;
-var mvpMatrixFromLight_p = new Matrix4();;
-var viewProjMatrixFromLight;
 var viewProjMatrix  = new Matrix4();  
-var viewProjMatrixFromLight = new Matrix4();
+var normalMatrix = new Matrix4(); // Transformation matrix for normals
+
 
 var quatMatrix = new Matrix4();   
 var qNew = new Quaternion(0, 0, 0, 1); // most-recent mouse drag's rotation
@@ -16,71 +14,39 @@ var g_LookX = 0.0, g_LookY = 0.0, g_LookZ = 0.0;
 var g_LookUp = 0.0;
 var g_speed = 1;
 
-// ! Draw the triangle and the plane (for generating a shadow map)
-function drawScene_shadow(gl, shadowProgram,  [triangle, cube, thunder, groundGrid, semiSphere, axis, thunder2, axis2, groundPlane, sphere], currentAngle, viewProjMatrixFromLight) {
-    //TODO
-    pushMatrix(g_modelMatrix);
-        drawSingleThunder(gl, shadowProgram, [thunder2, axis], viewProjMatrixFromLight)
-        mvpMatrixFromLight_t.set(g_mvpMatrix); // Used later
-    g_modelMatrix = popMatrix();
-
-    pushMatrix(g_modelMatrix);
-        drawManyClouds(gl, shadowProgram, semiSphere, viewProjMatrixFromLight);
-        mvpMatrixFromLight_t.set(g_mvpMatrix); // Used later
-    g_modelMatrix = popMatrix();
-
-    pushMatrix(g_modelMatrix);
-        draw(gl, shadowProgram, groundPlane, viewProjMatrixFromLight);
-        mvpMatrixFromLight_p.set(g_mvpMatrix); // Used later
-    g_modelMatrix = popMatrix();
-}
-function drawAll_shadow(gl, shadowProgram, vbArr, currentAngle, viewProjMatrixFromLight) {
-    viewProjMatrixFromLight.setPerspective(45.0, (gl.canvas.width) / (gl.canvas.height), 1.0, 200.0);
-    viewProjMatrixFromLight.lookAt(LIGHT[0], LIGHT[1], LIGHT[2], 0, 0, 0, 0.0, 1.0, 0.0);
-    drawScene_shadow(gl, shadowProgram, vbArr, currentAngle, viewProjMatrixFromLight)
-}
-
 // ! for regular drawin
 var g_jointAngle2 = 0;
-function drawScene(gl, normalProgram, [triangle, cube, thunder, groundGrid, semiSphere, axis, thunder2, axis2, groundPlane, sphere], currentAngle, viewProjMatrix) {
+function drawScene(gl, normalProgram, [triangle, cube, thunder, groundGrid, semiSphere, axis, thunder2, axis2, groundPlane, sphere, cube2], currentAngle, viewProjMatrix) {
     viewProjMatrix.scale(0.4 * g_viewScale, 0.4 * g_viewScale, 0.4 * g_viewScale); //scale everything
 
     pushMatrix(g_modelMatrix);
-    gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
-    g_modelMatrix.rotate(currentAngle/2, 0,1,0)
+    normalMatrix.setInverseOf(g_modelMatrix);
+    normalMatrix.transpose();
+    gl.uniformMatrix4fv(normalProgram.u_NormalMatrix, false, normalMatrix.elements);
+    g_modelMatrix.rotate(currentAngle, 0,1,0)
     draw(gl, normalProgram, sphere, viewProjMatrix);
     g_modelMatrix = popMatrix();
 
-    pushMatrix(g_modelMatrix);
-    gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
-    drawJointAssemblies(gl, normalProgram, cube, viewProjMatrix);
-    g_modelMatrix = popMatrix();
+    // pushMatrix(g_modelMatrix);
+    // drawJointAssemblies(gl, normalProgram, cube, viewProjMatrix);
+    // g_modelMatrix = popMatrix();
     
-    pushMatrix(g_modelMatrix);
-    gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
-    drawJointAssemblies2(gl, normalProgram, cube, viewProjMatrix);
-    g_modelMatrix = popMatrix();
-
-    pushMatrix(g_modelMatrix);
-    gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
-    drawManyClouds(gl, normalProgram, semiSphere, viewProjMatrix);
-    g_modelMatrix = popMatrix();
+    // pushMatrix(g_modelMatrix);
+    // drawManyClouds(gl, normalProgram, semiSphere, viewProjMatrix);
+    // g_modelMatrix = popMatrix();
     
-    pushMatrix(g_modelMatrix);
-    gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
-    drawThunderMotion(gl, normalProgram, [thunder, cube], viewProjMatrix);
-    g_modelMatrix = popMatrix();
+    // pushMatrix(g_modelMatrix);
+    // drawThunderMotion(gl, normalProgram, [thunder, cube], viewProjMatrix);
+    // g_modelMatrix = popMatrix();
     
-    pushMatrix(g_modelMatrix);
-    gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_t.elements);
-    drawSingleThunder(gl, normalProgram, [thunder2, axis], viewProjMatrix)
-    g_modelMatrix = popMatrix();
+    // pushMatrix(g_modelMatrix);
+    // drawSingleThunder(gl, normalProgram, [thunder2, axis], viewProjMatrix)
+    // g_modelMatrix = popMatrix();
 
     pushMatrix(g_modelMatrix);
     viewProjMatrix.rotate(-90.0, 1, 0, 0);
     viewProjMatrix.translate(0.0, 0.0, -0.6);
     viewProjMatrix.scale(0.4, 0.4, 0.4);
-    gl.uniformMatrix4fv(normalProgram.u_MvpMatrixFromLight, false, mvpMatrixFromLight_p.elements);
     draw(gl, normalProgram, groundPlane, viewProjMatrix);
     g_modelMatrix = popMatrix();
     
@@ -350,6 +316,11 @@ function draw(gl, program, o, viewProjMatrix) {
     g_mvpMatrix.set(viewProjMatrix);
     g_mvpMatrix.multiply(g_modelMatrix);
     gl.uniformMatrix4fv(program.u_MvpMatrix, false, g_mvpMatrix.elements);
+    //Find inverse transpose of modelMatrix:
+	normalMatrix.setInverseOf(g_modelMatrix);
+	normalMatrix.transpose();
+    gl.uniformMatrix4fv(program.u_NormalMatrix, false, normalMatrix.elements);
+
     if (o.indexBuffer != undefined) {
         gl.drawElements(gl.TRIANGLES, o.numIndices, gl.UNSIGNED_BYTE, 0);
     }
@@ -365,3 +336,4 @@ function initAttributeVariable(gl, a_attribute, buffer) {
     gl.vertexAttribPointer(a_attribute, buffer.num, buffer.type, false, 0, 0);
     gl.enableVertexAttribArray(a_attribute);
 }
+
